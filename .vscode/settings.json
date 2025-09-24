@@ -3,6 +3,7 @@
     "rust-analyzer.check.allTargets": false,
     "rust-analyzer.cargo.features": ["opi5p", "myplat"],
     "rust-analyzer.server.extraEnv": {
-        "CARGO_REGISTRIES_CRATES_IO_PROTOCOL": "sparse"
+        "CARGO_REGISTRIES_CRATES_IO_PROTOCOL": "sparse",
+        "AX_CONFIG_PATH": "${workspaceFolder}/.axconfig.toml"
     }
 }

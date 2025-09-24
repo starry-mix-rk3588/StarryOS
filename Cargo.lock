@@ -1592,7 +1592,6 @@ dependencies = [
 [[package]]
 name = "lwext4_rust"
 version = "0.2.0"
-source = "git+https://github.com/Starry-OS/lwext4_rust.git?rev=033fa2c#033fa2cc848c7495651b00af6695dc07de06d596"
 dependencies = [
  "bindgen",
  "log",
@@ -1728,7 +1727,7 @@ dependencies = [
 [[package]]
 name = "page_table_entry"
 version = "0.5.5"
-source = "git+https://github.com/Starry-OS/page_table_multiarch.git?rev=4edb821#4edb8217a12dd033409d8ac48f7adae5a89babfa"
+source = "git+https://github.com/starry-mix-rk3588/page_table_multiarch?rev=3f697c8#3f697c8c876432f42d5429a5b8d130889213ff6e"
 dependencies = [
  "aarch64-cpu",
  "bitflags 2.9.4",
@@ -1739,7 +1738,7 @@ dependencies = [
 [[package]]
 name = "page_table_multiarch"
 version = "0.5.5"
-source = "git+https://github.com/Starry-OS/page_table_multiarch.git?rev=4edb821#4edb8217a12dd033409d8ac48f7adae5a89babfa"
+source = "git+https://github.com/starry-mix-rk3588/page_table_multiarch?rev=3f697c8#3f697c8c876432f42d5429a5b8d130889213ff6e"
 dependencies = [
  "arrayvec",
  "bitmaps",
