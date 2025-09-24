@@ -104,10 +104,13 @@ qemu = [
 ]
 vf2 = ["dep:axplat-riscv64-visionfive2", "axfeat/driver-sdmmc-gpt"]
 2k1000la = ["dep:axplat-loongarch64-2k1000la", "axfeat/driver-ahci-gpt"]
+opi5p = ["dep:axplat-aarch64-opi5p", "axfeat/driver-sdmmc-gpt"]
 
 # Stubs
 pci = ["axfeat/bus-pci"]
 mmio = ["axfeat/bus-mmio"]
+
+myplat = []
 
 [dependencies]
 axfeat.workspace = true
@@ -142,9 +145,14 @@ rev = "b9b10d7"
 features = ["fp-simd", "irq", "rtc"]
 optional = true
 
+[dependencies.axplat-aarch64-opi5p]
+path = "crates/axplat-opi5p/axplat-aarch64-opi5p"
+features = ["irq", "fp-simd"]
+optional = true
+
 [patch.crates-io]
 axbacktrace = { git = "https://github.com/Starry-OS/axbacktrace.git", rev = "322f6da" }
-axcpu = { git = "https://github.com/Starry-OS/axcpu.git", rev = "dfaa046" }
+axcpu = { path = "crates/axcpu"}
 axerrno = { git = "https://github.com/Starry-OS/axerrno.git", rev = "58be232" }
 axio = { git = "https://github.com/Starry-OS/axio.git", rev = "e11ca75" }
 axplat = { git = "https://github.com/Starry-OS/axplat_crates.git", rev = "9bf8648" }

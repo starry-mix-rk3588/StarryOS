@@ -2,3 +2,9 @@
 	path = arceos
 	url = https://github.com/Starry-OS/arceos
 	branch = main
+[submodule "crates/axcpu"]
+	path = crates/axcpu
+	url = https://github.com/starry-mix-rk3588/axcpu.git
+[submodule "crates/axplat-opi5p"]
+	path = crates/axplat-opi5p
+	url = https://github.com/starry-mix-rk3588/axplat-opi5p.git
