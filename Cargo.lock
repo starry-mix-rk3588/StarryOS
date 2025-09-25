@@ -289,12 +289,12 @@ dependencies = [
 [[package]]
 name = "axdriver_base"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 
 [[package]]
 name = "axdriver_block"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 dependencies = [
  "axdriver_base",
  "gpt_disk_io",
@@ -305,7 +305,7 @@ dependencies = [
 [[package]]
 name = "axdriver_display"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 dependencies = [
  "axdriver_base",
 ]
@@ -313,7 +313,7 @@ dependencies = [
 [[package]]
 name = "axdriver_input"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 dependencies = [
  "axdriver_base",
  "strum",
@@ -322,7 +322,7 @@ dependencies = [
 [[package]]
 name = "axdriver_net"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 dependencies = [
  "axdriver_base",
  "log",
@@ -332,7 +332,7 @@ dependencies = [
 [[package]]
 name = "axdriver_pci"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 dependencies = [
  "virtio-drivers",
 ]
@@ -340,7 +340,7 @@ dependencies = [
 [[package]]
 name = "axdriver_virtio"
 version = "0.1.2"
-source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=6ddb55b#6ddb55b90f66b30c911334b99db8e47791f263a7"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
 dependencies = [
  "axdriver_base",
  "axdriver_block",
@@ -527,7 +527,7 @@ dependencies = [
 [[package]]
 name = "axplat"
 version = "0.2.0"
-source = "git+https://github.com/Starry-OS/axplat_crates.git?rev=9bf8648#9bf864808185a5985bc930ab529c5f3a338b438d"
+source = "git+https://github.com/starry-mix-rk3588/axplat_crates.git?rev=3a5ab8c#3a5ab8ca94eb70028771217d2391a6af38edeb4b"
 dependencies = [
  "axplat-macros",
  "bitflags 2.9.4",
@@ -545,7 +545,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "axplat-aarch64-peripherals 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dw_apb_uart",
  "kspin",
  "log",
@@ -573,15 +573,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "axplat-aarch64-peripherals"
+version = "0.2.0"
+source = "git+https://github.com/starry-mix-rk3588/axplat_crates.git?rev=3a5ab8c#3a5ab8ca94eb70028771217d2391a6af38edeb4b"
+dependencies = [
+ "aarch64-cpu",
+ "arm-gic-driver",
+ "arm_pl011",
+ "arm_pl031",
+ "axcpu",
+ "axplat",
+ "int_ratio",
+ "kspin",
+ "lazyinit",
+ "log",
+ "page_table_entry",
+ "spin 0.10.0",
+]
+
+[[package]]
 name = "axplat-aarch64-qemu-virt"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f03bfe81ebc5b2f567eecadcab221107b90f394485dd0da39334411a676d81a"
+source = "git+https://github.com/starry-mix-rk3588/axplat_crates.git?rev=3a5ab8c#3a5ab8ca94eb70028771217d2391a6af38edeb4b"
 dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "axplat-aarch64-peripherals 0.2.0 (git+https://github.com/starry-mix-rk3588/axplat_crates.git?rev=3a5ab8c)",
  "log",
  "page_table_entry",
 ]
@@ -606,7 +624,7 @@ dependencies = [
 [[package]]
 name = "axplat-loongarch64-qemu-virt"
 version = "0.2.0"
-source = "git+https://github.com/Starry-OS/axplat_crates.git?rev=9bf8648#9bf864808185a5985bc930ab529c5f3a338b438d"
+source = "git+https://github.com/starry-mix-rk3588/axplat_crates.git?rev=3a5ab8c#3a5ab8ca94eb70028771217d2391a6af38edeb4b"
 dependencies = [
  "axconfig-macros",
  "axcpu",
@@ -634,7 +652,7 @@ dependencies = [
 [[package]]
 name = "axplat-riscv64-qemu-virt"
 version = "0.2.0"
-source = "git+https://github.com/Starry-OS/axplat_crates.git?rev=9bf8648#9bf864808185a5985bc930ab529c5f3a338b438d"
+source = "git+https://github.com/starry-mix-rk3588/axplat_crates.git?rev=3a5ab8c#3a5ab8ca94eb70028771217d2391a6af38edeb4b"
 dependencies = [
  "axconfig-macros",
  "axcpu",
