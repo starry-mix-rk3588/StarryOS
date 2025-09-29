@@ -141,6 +141,69 @@ impl DeviceOps for CpuDmaLatency {
     }
 }
 
+mod drm;
+use core::mem;
+
+use drm::*;
+use starry_vm::VmMutPtr;
+
+use crate::mm::UserPtr;
+
+#[repr(C)]
+pub struct RknpuAction {
+    pub flags: u32,
+    pub value: u32,
+}
+
+struct Card;
+
+impl DeviceOps for Card {
+    fn read_at(&self, _buf: &mut [u8], _offset: u64) -> VfsResult<usize> {
+        info!("card read = >");
+        Err(AxError::InvalidInput)
+    }
+
+    fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
+        info!("card write = >");
+        Ok(buf.len())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn flags(&self) -> NodeFlags {
+        NodeFlags::NON_CACHEABLE
+    }
+
+    fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
+        info!("card ioctl => cmd: {:#x}, arg: {:#x}", cmd, arg);
+        let cmd: usize = cmd as usize;
+        if cmd == DRM_IOCTL_VERSION {
+            // ===============================
+            let drm_version = DrmVersion::new(0, 1, 0, "drm", "2025", "test");
+            // let drm_version_ref: &mut DrmVersion =
+            // UserPtr::<DrmVersion>::from(arg).get_as_mut()?; *drm_version_ref
+            // = drm_version; ================================
+            info!(
+                "DRM_IOCTL_VERSION: string addr: {:#x}, {:#x}, {:#x}",
+                drm_version.desc as usize, drm_version.name as usize, drm_version.date as usize
+            );
+            info!("sizeof DrmVersion: {}", size_of::<DrmVersion>());
+            (arg as *mut DrmVersion).vm_write(drm_version);
+
+            let drm_version_ref: &mut DrmVersion = unsafe { &mut *(arg as *mut DrmVersion) };
+            let name_str = unsafe {
+                let name_slice =
+                    core::slice::from_raw_parts(drm_version_ref.name, drm_version_ref.name_len);
+                str::from_utf8(name_slice).unwrap_or("<invalid utf-8>")
+            };
+            info!("args: arg.name {}", name_str);
+        }
+        VfsResult::Ok(0)
+    }
+}
+
 fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     let mut root = DirMapping::new();
     root.add(
@@ -295,5 +358,42 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
         SimpleDir::new_maker(fs.clone(), Arc::new(event::input_devices(fs.clone()))),
     );
 
+    let mut dri = DirMapping::new();
+    dri.add(
+        "card0",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(10, 1024),
+            Arc::new(Card),
+        ),
+    );
+
+    dri.add(
+        "card1",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(10, 1024),
+            Arc::new(Card),
+        ),
+    );
+
+    root.add("dri", SimpleDir::new_maker(fs.clone(), Arc::new(dri)));
+
     SimpleDir::new_maker(fs, Arc::new(root))
 }
+
+// 0xc0406400
+//
+//
+// cmd的大小为 32位，共分 4 个域：
+//
+// bit31~bit30   2位为 “区别读写” 区，作用是区分是读取命令还是写入命令。
+// bit29~bit15   14位为 "数据大小" 区，表示 ioctl()中的 arg 变量传送的内存大小。
+// bit14~bit08   8位为 “魔数"(也称为"幻数")区，这个值用以与其它设备驱动程序的
+// ioctl 命令进行区别。 bit07~bit00   8位为 "区别序号"
+// 区，是区分命令的命令顺序序号。
+//
+// 11       00 0000 01000000       0110 0100           0000 0000
+//
