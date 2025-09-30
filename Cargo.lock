@@ -266,6 +266,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "axdma"
+version = "0.2.0"
+dependencies = [
+ "allocator",
+ "axalloc",
+ "axconfig",
+ "axerrno",
+ "axhal",
+ "axmm",
+ "kspin",
+ "log",
+ "memory_addr",
+]
+
+[[package]]
 name = "axdriver"
 version = "0.2.0"
 dependencies = [
@@ -2185,6 +2200,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 name = "starry"
 version = "0.1.0"
 dependencies = [
+ "axdma",
  "axdriver",
  "axerrno",
  "axfeat",
@@ -2215,6 +2231,7 @@ dependencies = [
  "axbacktrace",
  "axconfig",
  "axdisplay",
+ "axdma",
  "axdriver",
  "axerrno",
  "axfeat",

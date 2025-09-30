@@ -42,6 +42,7 @@ axnet = { path = "arceos/modules/axnet" }
 axruntime = { path = "arceos/modules/axruntime" }
 axsync = { path = "arceos/modules/axsync" }
 axtask = { path = "arceos/modules/axtask", features = ["task-ext"] }
+axdma = { path = "arceos/modules/axdma" }
 
 axbacktrace = "0.1"
 axerrno = "0.1"
@@ -123,6 +124,7 @@ axlog.workspace = true
 axruntime.workspace = true
 axsync.workspace = true
 axtask.workspace = true
+axdma.workspace = true
 
 starry-core.workspace = true
 starry-api.workspace = true
