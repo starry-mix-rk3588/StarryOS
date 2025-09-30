@@ -142,12 +142,11 @@ impl DeviceOps for CpuDmaLatency {
 }
 
 mod drm;
-use core::{mem, slice};
+use core::slice;
 
+use axdma::alloc_coherent;
 use drm::*;
 use starry_vm::{VmMutPtr, vm_write_slice};
-
-use crate::mm::UserPtr;
 
 #[repr(C)]
 pub struct RknpuAction {
@@ -196,13 +195,13 @@ impl DeviceOps for Card {
 
             let name_slice: &[u8] =
                 unsafe { slice::from_raw_parts(k_drm_version.name, k_drm_version.name_len) };
-            vm_write_slice(name_addr as *mut _, name_slice);
+            let _ = vm_write_slice(name_addr as *mut _, name_slice);
 
             k_drm_version.name = name_addr as *mut u8;
             k_drm_version.date = date_addr as *mut u8;
             k_drm_version.desc = desc_addr as *mut u8;
 
-            (arg as *mut DrmVersion).vm_write(k_drm_version);
+            let _ = (arg as *mut DrmVersion).vm_write(k_drm_version);
         } else if cmd == DRM_IOCTL_GET_UNIQUE {
             info!("DRM_IOCTL_GET_UNIQUE...");
             // move relevant information to Card structure.
@@ -213,11 +212,11 @@ impl DeviceOps for Card {
 
             let unique_slice: &[u8] =
                 unsafe { slice::from_raw_parts(k_drm_unique.unique, k_drm_unique.unique_len) };
-            vm_write_slice(unique_addr as *mut _, unique_slice);
+            let _ = vm_write_slice(unique_addr as *mut _, unique_slice);
 
             k_drm_unique.unique = unique_addr as *mut u8;
-            
-            (arg as *mut DrmUnique).vm_write(k_drm_unique);
+
+            let _ = (arg as *mut DrmUnique).vm_write(k_drm_unique);
         } else if cmd == DRM_IOCTL_QXL_ALLOC {
             info!("DRM_IOCTL_QXL_ALLOC...");
             let user_drm: &mut DrmQxlAlloc = unsafe { &mut *(arg as *mut DrmQxlAlloc) };
@@ -226,7 +225,16 @@ impl DeviceOps for Card {
                 user_drm.size, user_drm.handle
             );
 
-            let mut k_drm_alloc = DrmQxlAlloc {
+            // let layout = Layout::from_size_align(user_drm.size as usize, 8).unwrap();
+            // let handle = match unsafe { alloc_coherent(layout) } {
+            // Ok(dma_info) => dma_info.bus_addr.as_u64() as usize,
+            // Err(_) => 0,
+            // };
+            // panicked at
+            // /home/ajax/.cargo/git/checkouts/allocator-b7f5b48677ad99f6/d5feebd/src/slab.
+            // rs:24:29: called `Option::unwrap()` on a `None` value
+
+            let k_drm_alloc = DrmQxlAlloc {
                 size: user_drm.size,
                 handle: 0, // TODO: genarate a unique handle
             };
@@ -234,7 +242,7 @@ impl DeviceOps for Card {
                 "got size: {}, handle, {}",
                 k_drm_alloc.size, k_drm_alloc.handle
             );
-            (arg as *mut DrmQxlAlloc).vm_write(k_drm_alloc);
+            let _ = (arg as *mut DrmQxlAlloc).vm_write(k_drm_alloc);
 
             return VfsResult::Ok(0);
         }
