@@ -75,4 +75,29 @@ impl DrmVersion {
     }
 }
 
+#[repr(C)]
+pub struct DrmUnique {
+    pub unique_len: usize,
+    pub unique: *mut u8,
+}
+
+impl DrmUnique {
+    pub fn new(unique: &'static str) -> Self {
+        DrmUnique {
+            unique: unique.as_ptr() as *mut u8,
+            unique_len: unique.len(),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct DrmQxlAlloc {
+    pub size: u32,
+    pub handle: u32,
+}
+
 pub const DRM_IOCTL_VERSION: usize = drm_iowr::<DrmVersion>(0x00);
+
+pub const DRM_IOCTL_GET_UNIQUE: usize = drm_iowr::<DrmUnique>(0x1);
+
+pub const DRM_IOCTL_QXL_ALLOC: usize = drm_iowr::<DrmQxlAlloc>(0x40 + 0x00);

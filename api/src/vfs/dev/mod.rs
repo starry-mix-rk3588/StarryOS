@@ -142,10 +142,10 @@ impl DeviceOps for CpuDmaLatency {
 }
 
 mod drm;
-use core::mem;
+use core::{mem, slice};
 
 use drm::*;
-use starry_vm::VmMutPtr;
+use starry_vm::{VmMutPtr, vm_write_slice};
 
 use crate::mm::UserPtr;
 
@@ -180,25 +180,63 @@ impl DeviceOps for Card {
         info!("card ioctl => cmd: {:#x}, arg: {:#x}", cmd, arg);
         let cmd: usize = cmd as usize;
         if cmd == DRM_IOCTL_VERSION {
-            // ===============================
-            let drm_version = DrmVersion::new(0, 1, 0, "drm", "2025", "test");
-            // let drm_version_ref: &mut DrmVersion =
-            // UserPtr::<DrmVersion>::from(arg).get_as_mut()?; *drm_version_ref
-            // = drm_version; ================================
-            info!(
-                "DRM_IOCTL_VERSION: string addr: {:#x}, {:#x}, {:#x}",
-                drm_version.desc as usize, drm_version.name as usize, drm_version.date as usize
-            );
-            info!("sizeof DrmVersion: {}", size_of::<DrmVersion>());
-            (arg as *mut DrmVersion).vm_write(drm_version);
+            info!("DRM_IOCTL_VERSION...");
+            // move relevant information to Card structure.
+            let mut k_drm_version = DrmVersion::new(1, 3, 0, "rknpu", "2025", "test");
 
-            let drm_version_ref: &mut DrmVersion = unsafe { &mut *(arg as *mut DrmVersion) };
-            let name_str = unsafe {
-                let name_slice =
-                    core::slice::from_raw_parts(drm_version_ref.name, drm_version_ref.name_len);
-                str::from_utf8(name_slice).unwrap_or("<invalid utf-8>")
+            let user_drm: &mut DrmVersion = unsafe { &mut *(arg as *mut DrmVersion) };
+            let name_addr = user_drm.name as usize; // 0x1280ca0
+            let date_addr = user_drm.date as usize; // 0x1280cc0
+            let desc_addr = user_drm.desc as usize; // 0x1280ce0
+
+            info!(
+                "name addr: {:#x}, date addr: {:#x}, desc addr: {:#x}",
+                name_addr, date_addr, desc_addr
+            );
+
+            let name_slice: &[u8] =
+                unsafe { slice::from_raw_parts(k_drm_version.name, k_drm_version.name_len) };
+            vm_write_slice(name_addr as *mut _, name_slice);
+
+            k_drm_version.name = name_addr as *mut u8;
+            k_drm_version.date = date_addr as *mut u8;
+            k_drm_version.desc = desc_addr as *mut u8;
+
+            (arg as *mut DrmVersion).vm_write(k_drm_version);
+        } else if cmd == DRM_IOCTL_GET_UNIQUE {
+            info!("DRM_IOCTL_GET_UNIQUE...");
+            // move relevant information to Card structure.
+            let mut k_drm_unique = DrmUnique::new("drm unique...");
+
+            let user_drm: &mut DrmUnique = unsafe { &mut *(arg as *mut DrmUnique) };
+            let unique_addr = user_drm.unique as usize;
+
+            let unique_slice: &[u8] =
+                unsafe { slice::from_raw_parts(k_drm_unique.unique, k_drm_unique.unique_len) };
+            vm_write_slice(unique_addr as *mut _, unique_slice);
+
+            k_drm_unique.unique = unique_addr as *mut u8;
+            
+            (arg as *mut DrmUnique).vm_write(k_drm_unique);
+        } else if cmd == DRM_IOCTL_QXL_ALLOC {
+            info!("DRM_IOCTL_QXL_ALLOC...");
+            let user_drm: &mut DrmQxlAlloc = unsafe { &mut *(arg as *mut DrmQxlAlloc) };
+            info!(
+                "request size: {}, handle, {}",
+                user_drm.size, user_drm.handle
+            );
+
+            let mut k_drm_alloc = DrmQxlAlloc {
+                size: user_drm.size,
+                handle: 0, // TODO: genarate a unique handle
             };
-            info!("args: arg.name {}", name_str);
+            info!(
+                "got size: {}, handle, {}",
+                k_drm_alloc.size, k_drm_alloc.handle
+            );
+            (arg as *mut DrmQxlAlloc).vm_write(k_drm_alloc);
+
+            return VfsResult::Ok(0);
         }
         VfsResult::Ok(0)
     }
@@ -384,7 +422,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     SimpleDir::new_maker(fs, Arc::new(root))
 }
 
-// 0xc0406400
+// 0xc0406400  < DRM_IOCTL_VERSION >
 //
 //
 // cmd的大小为 32位，共分 4 个域：
@@ -397,3 +435,10 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
 //
 // 11       00 0000 01000000       0110 0100           0000 0000
 //
+
+// 0xc0106401 < DRM_IOCTL_GET_UNIQUE >
+// 11       00 0000 00010000      0110 0100            0000 0001
+//
+
+// 0xc0086440 < DRM_IOCTL_QXL_ALLOC >
+// 11       00 0000 00001000      0110 0100            0100 0000
