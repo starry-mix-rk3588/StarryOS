@@ -181,7 +181,7 @@ impl DeviceOps for Card {
         if cmd == DRM_IOCTL_VERSION {
             info!("DRM_IOCTL_VERSION...");
             // move relevant information to Card structure.
-            let mut k_drm_version = DrmVersion::new(1, 3, 0, "rknpu", "2025", "test");
+            let mut k_drm_version = DrmVersion::new(0, 9, 6, "rknpu", "2", "RKNPU driver");
 
             let user_drm: &mut DrmVersion = unsafe { &mut *(arg as *mut DrmVersion) };
             let name_addr = user_drm.name as usize; // 0x1280ca0
@@ -196,6 +196,13 @@ impl DeviceOps for Card {
             let name_slice: &[u8] =
                 unsafe { slice::from_raw_parts(k_drm_version.name, k_drm_version.name_len) };
             let _ = vm_write_slice(name_addr as *mut _, name_slice);
+            let date_slice: &[u8] =
+                unsafe { slice::from_raw_parts(k_drm_version.date, k_drm_version.date_len) };
+            let _ = vm_write_slice(date_addr as * mut _, date_slice);
+            let desc_slice: &[u8] =
+                unsafe { slice::from_raw_parts(k_drm_version.desc, k_drm_version.desc_len) };
+            let _ = vm_write_slice(desc_addr as *mut _, desc_slice);
+
 
             k_drm_version.name = name_addr as *mut u8;
             k_drm_version.date = date_addr as *mut u8;
@@ -205,7 +212,7 @@ impl DeviceOps for Card {
         } else if cmd == DRM_IOCTL_GET_UNIQUE {
             info!("DRM_IOCTL_GET_UNIQUE...");
             // move relevant information to Card structure.
-            let mut k_drm_unique = DrmUnique::new("drm unique...");
+            let mut k_drm_unique = DrmUnique::new("");
 
             let user_drm: &mut DrmUnique = unsafe { &mut *(arg as *mut DrmUnique) };
             let unique_addr = user_drm.unique as usize;
@@ -450,3 +457,6 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
 
 // 0xc0086440 < DRM_IOCTL_QXL_ALLOC >
 // 11       00 0000 00001000      0110 0100            0100 0000
+
+// 0xc0106407 < unknow >
+// 11       00 0000 00010000      0110 0100            0000 0111
