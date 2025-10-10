@@ -35,8 +35,6 @@ axdma.workspace = true
 starry-core.workspace = true
 
 arrayvec = { version = "0.7.6", default-features = false }
-axbacktrace.workspace = true
-axerrno.workspace = true
 bitflags.workspace = true
 bitmaps = { version = "3.2.1", default-features = false }
 bytemuck.workspace = true
@@ -67,8 +65,6 @@ starry-signal.workspace = true
 starry-vm = { workspace = true, features = ["axio"] }
 syscalls = { git = "https://github.com/jasonwhite/syscalls.git", rev = "92624de", default-features = false }
 zerocopy = { version = "0.8.26", features = ["derive"] }
-
-starry-core.workspace = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86 = "0.52"
