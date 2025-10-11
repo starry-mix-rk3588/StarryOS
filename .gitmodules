@@ -11,3 +11,6 @@
 [submodule "crates/lwext4_rust"]
 	path = crates/lwext4_rust
 	url = https://github.com/starry-mix-rk3588/lwext4_rust.git
+[submodule "crates/rknpu2-rslab"]
+	path = crates/rknpu2-rslab
+	url = https://github.com/starry-mix-rk3588/rknpu2-rslab.git

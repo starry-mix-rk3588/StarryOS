@@ -5,5 +5,13 @@
     "rust-analyzer.server.extraEnv": {
         "CARGO_REGISTRIES_CRATES_IO_PROTOCOL": "sparse",
         "AX_CONFIG_PATH": "${workspaceFolder}/.axconfig.toml"
+    },
+    "files.associations": {
+        "*.kts": "gradle",
+        "*.json5": "json",
+        "*.S": "arm",
+        "compare": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
     }
 }

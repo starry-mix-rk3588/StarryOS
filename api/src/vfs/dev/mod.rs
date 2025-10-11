@@ -141,120 +141,20 @@ impl DeviceOps for CpuDmaLatency {
     }
 }
 
-mod drm;
+// mod drm;
+mod rknpu;
 use core::slice;
 
 use axdma::alloc_coherent;
-use drm::*;
+// use drm::*;
 use starry_vm::{VmMutPtr, vm_write_slice};
+use rknpu::card1::Card1;
+use rknpu::Card;
 
 #[repr(C)]
 pub struct RknpuAction {
     pub flags: u32,
     pub value: u32,
-}
-
-struct Card;
-
-impl DeviceOps for Card {
-    fn read_at(&self, _buf: &mut [u8], _offset: u64) -> VfsResult<usize> {
-        info!("card read = >");
-        Err(AxError::InvalidInput)
-    }
-
-    fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
-        info!("card write = >");
-        Ok(buf.len())
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn flags(&self) -> NodeFlags {
-        NodeFlags::NON_CACHEABLE
-    }
-
-    fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
-        info!("card ioctl => cmd: {:#x}, arg: {:#x}", cmd, arg);
-        let cmd: usize = cmd as usize;
-        if cmd == DRM_IOCTL_VERSION {
-            info!("DRM_IOCTL_VERSION...");
-            // move relevant information to Card structure.
-            let mut k_drm_version = DrmVersion::new(0, 9, 6, "rknpu", "2", "RKNPU driver");
-
-            let user_drm: &mut DrmVersion = unsafe { &mut *(arg as *mut DrmVersion) };
-            let name_addr = user_drm.name as usize; // 0x1280ca0
-            let date_addr = user_drm.date as usize; // 0x1280cc0
-            let desc_addr = user_drm.desc as usize; // 0x1280ce0
-
-            info!(
-                "name addr: {:#x}, date addr: {:#x}, desc addr: {:#x}",
-                name_addr, date_addr, desc_addr
-            );
-
-            let name_slice: &[u8] =
-                unsafe { slice::from_raw_parts(k_drm_version.name, k_drm_version.name_len) };
-            let _ = vm_write_slice(name_addr as *mut _, name_slice);
-            let date_slice: &[u8] =
-                unsafe { slice::from_raw_parts(k_drm_version.date, k_drm_version.date_len) };
-            let _ = vm_write_slice(date_addr as * mut _, date_slice);
-            let desc_slice: &[u8] =
-                unsafe { slice::from_raw_parts(k_drm_version.desc, k_drm_version.desc_len) };
-            let _ = vm_write_slice(desc_addr as *mut _, desc_slice);
-
-
-            k_drm_version.name = name_addr as *mut u8;
-            k_drm_version.date = date_addr as *mut u8;
-            k_drm_version.desc = desc_addr as *mut u8;
-
-            let _ = (arg as *mut DrmVersion).vm_write(k_drm_version);
-        } else if cmd == DRM_IOCTL_GET_UNIQUE {
-            info!("DRM_IOCTL_GET_UNIQUE...");
-            // move relevant information to Card structure.
-            let mut k_drm_unique = DrmUnique::new("");
-
-            let user_drm: &mut DrmUnique = unsafe { &mut *(arg as *mut DrmUnique) };
-            let unique_addr = user_drm.unique as usize;
-
-            let unique_slice: &[u8] =
-                unsafe { slice::from_raw_parts(k_drm_unique.unique, k_drm_unique.unique_len) };
-            let _ = vm_write_slice(unique_addr as *mut _, unique_slice);
-
-            k_drm_unique.unique = unique_addr as *mut u8;
-
-            let _ = (arg as *mut DrmUnique).vm_write(k_drm_unique);
-        } else if cmd == DRM_IOCTL_QXL_ALLOC {
-            info!("DRM_IOCTL_QXL_ALLOC...");
-            let user_drm: &mut DrmQxlAlloc = unsafe { &mut *(arg as *mut DrmQxlAlloc) };
-            info!(
-                "request size: {}, handle, {}",
-                user_drm.size, user_drm.handle
-            );
-
-            // let layout = Layout::from_size_align(user_drm.size as usize, 8).unwrap();
-            // let handle = match unsafe { alloc_coherent(layout) } {
-            // Ok(dma_info) => dma_info.bus_addr.as_u64() as usize,
-            // Err(_) => 0,
-            // };
-            // panicked at
-            // /home/ajax/.cargo/git/checkouts/allocator-b7f5b48677ad99f6/d5feebd/src/slab.
-            // rs:24:29: called `Option::unwrap()` on a `None` value
-
-            let k_drm_alloc = DrmQxlAlloc {
-                size: user_drm.size,
-                handle: 0, // TODO: genarate a unique handle
-            };
-            info!(
-                "got size: {}, handle, {}",
-                k_drm_alloc.size, k_drm_alloc.handle
-            );
-            let _ = (arg as *mut DrmQxlAlloc).vm_write(k_drm_alloc);
-
-            return VfsResult::Ok(0);
-        }
-        VfsResult::Ok(0)
-    }
 }
 
 fn builder(fs: Arc<SimpleFs>) -> DirMaker {
@@ -428,7 +328,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             fs.clone(),
             NodeType::CharacterDevice,
             DeviceId::new(10, 1024),
-            Arc::new(Card),
+            Arc::new(Card1),
         ),
     );
 
