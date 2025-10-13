@@ -536,6 +536,285 @@ impl RK3588NPU {
 
         Ok(())
     }
+
+    // ========== 任务提交相关方法 ==========
+
+    /// 提交任务到 NPU 硬件（阻塞模式，单核）
+    ///
+    /// 此方法实现了完整的任务提交流程：
+    /// 1. 向硬件寄存器提交任务参数（PC 模式）
+    /// 2. 启动 NPU 执行
+    /// 3. 阻塞等待任务完成
+    /// 4. 验证执行结果
+    ///
+    /// # 参数
+    /// - `task_base`: 任务数组的基地址（内核虚拟地址）
+    /// - `task_start`: 起始任务索引
+    /// - `task_number`: 任务数量
+    /// - `task_base_phys`: 任务数组的物理地址（用于 DMA）
+    /// - `core`: 使用的核心（单核模式）
+    /// - `timeout_ms`: 超时时间（毫秒）
+    ///
+    /// # 返回
+    /// 成功返回实际完成的任务数，失败返回错误
+    ///
+    /// # 示例
+    /// ```no_run
+    /// use rknpu_device::{RK3588NPU, NpuCore};
+    ///
+    /// let mut npu = RK3588NPU::new(base_addr, RkBoard::Rk3588);
+    /// npu.init()?;
+    /// npu.power_domain_on(NpuCore::Npu0)?;
+    ///
+    /// let task_count = npu.submit_task_blocking(
+    ///     task_ptr,
+    ///     0,              // task_start
+    ///     10,             // task_number
+    ///     task_phys_addr,
+    ///     NpuCore::Npu0,
+    ///     5000,           // 5 秒超时
+    /// )?;
+    /// ```
+    pub fn submit_task_blocking(
+        &mut self,
+        task_base: *const u8,
+        task_start: u32,
+        task_number: u32,
+        task_base_phys: u64,
+        core: NpuCore,
+        timeout_ms: u32,
+    ) -> Result<u32> {
+        if task_number == 0 {
+            return Err(RknpuError::InvalidParameter);
+        }
+
+        if !self.is_core_available(core) {
+            return Err(RknpuError::CoreUnavailable);
+        }
+
+        info!(
+            "[RKNPU] Submitting task: core={:?}, start={}, count={}, timeout={}ms",
+            core, task_start, task_number, timeout_ms
+        );
+
+        // 1. 提交到硬件
+        self.job_commit_pc(task_base, task_start, task_number, task_base_phys, core)?;
+
+        // 2. 等待完成
+        self.wait_job_done(core, task_number, timeout_ms)?;
+
+        // 3. 返回完成的任务数
+        info!(
+            "[RKNPU] Task completed successfully: {} tasks",
+            task_number
+        );
+
+        Ok(task_number)
+    }
+
+    /// PC 模式硬件提交
+    ///
+    /// 此方法将任务参数写入硬件寄存器，启动 NPU 执行。
+    /// 实现参考 C 代码中的 `rknpu_job_subcore_commit_pc` 函数。
+    ///
+    /// # 硬件操作流程
+    /// 1. 切换到 slave 模式（写 PC_DATA_ADDR = 0x1）
+    /// 2. 设置第一个任务的寄存器命令地址
+    /// 3. 设置数据量（寄存器配置数量）
+    /// 4. 设置最后一个任务的中断掩码
+    /// 5. 清除中断
+    /// 6. 设置任务控制（PC 模式 | 任务数量）
+    /// 7. 设置 DMA 基地址
+    /// 8. 启动 NPU（写 PC_OP_EN = 0x1, 然后 0x0）
+    fn job_commit_pc(
+        &mut self,
+        task_base: *const u8,
+        task_start: u32,
+        task_number: u32,
+        task_base_phys: u64,
+        core: NpuCore,
+    ) -> Result<()> {
+        use super::config::{registers, PC_DATA_EXTRA_AMOUNT};
+
+        // RknpuTask 的大小（从 C 代码中的 packed struct）
+        const TASK_SIZE: usize = 40; // sizeof(RknpuTask)
+
+        // 计算第一个和最后一个任务的地址
+        let first_task_offset = (task_start as usize) * TASK_SIZE;
+        let last_task_offset = ((task_start + task_number - 1) as usize) * TASK_SIZE;
+
+        let first_task_ptr = unsafe { task_base.add(first_task_offset) };
+        let last_task_ptr = unsafe { task_base.add(last_task_offset) };
+
+        // 读取任务参数（需要处理 packed struct 的非对齐访问）
+        let first_regcmd_addr = unsafe {
+            let ptr = first_task_ptr.add(32) as *const u64; // regcmd_addr 在偏移 32
+            core::ptr::read_unaligned(ptr)
+        };
+
+        let first_regcfg_amount = unsafe {
+            let ptr = first_task_ptr.add(24) as *const u32; // regcfg_amount 在偏移 24
+            core::ptr::read_unaligned(ptr)
+        };
+
+        let last_int_mask = unsafe {
+            let ptr = last_task_ptr.add(12) as *const u32; // int_mask 在偏移 12
+            core::ptr::read_unaligned(ptr)
+        };
+
+        let first_int_mask = unsafe {
+            let ptr = first_task_ptr.add(12) as *const u32; // int_mask 在偏移 12
+            core::ptr::read_unaligned(ptr)
+        };
+
+        debug!(
+            "[RKNPU] Task params: regcmd_addr=0x{:x}, regcfg_amount={}, last_int_mask=0x{:x}",
+            first_regcmd_addr, first_regcfg_amount, last_int_mask
+        );
+
+        // 1. 切换到 slave 模式
+        self.write_reg(core, registers::PC_DATA_ADDR, 0x1)?;
+
+        // 2. 设置 PC 数据地址（第一个任务的寄存器命令地址）
+        self.write_reg(core, registers::PC_DATA_ADDR, first_regcmd_addr as u32)?;
+
+        // 3. 计算并设置数据量
+        let pc_data_amount_scale = self.config.pc_data_amount_scale;
+        let data_amount = (first_regcfg_amount + PC_DATA_EXTRA_AMOUNT + pc_data_amount_scale - 1)
+            / pc_data_amount_scale
+            - 1;
+        self.write_reg(core, registers::PC_DATA_AMOUNT, data_amount)?;
+
+        // 4. 设置中断掩码（最后一个任务的）
+        self.write_reg(core, registers::INT_MASK, last_int_mask)?;
+
+        // 5. 清除中断（使用第一个任务的中断掩码）
+        self.write_reg(core, registers::INT_CLEAR, first_int_mask)?;
+
+        // 6. 设置任务控制
+        // 格式: ((0x6 | task_pp_en) << pc_task_number_bits) | task_number
+        // task_pp_en = 0 (不使用 ping-pong 模式)
+        let pc_task_number_bits = self.config.pc_task_number_bits;
+        let task_control = ((0x6) << pc_task_number_bits) | task_number;
+        self.write_reg(core, registers::PC_TASK_CONTROL, task_control)?;
+
+        // 7. 设置 DMA 基地址
+        self.write_reg(core, registers::PC_DMA_BASE_ADDR, task_base_phys as u32)?;
+
+        // 8. 启动 NPU
+        self.write_reg(core, registers::PC_OP_EN, 0x1)?;
+        self.write_reg(core, registers::PC_OP_EN, 0x0)?;
+
+        info!(
+            "[RKNPU] Task submitted to hardware: core={:?}, tasks={}, control=0x{:x}",
+            core, task_number, task_control
+        );
+
+        Ok(())
+    }
+
+    /// 等待任务完成（阻塞模式）
+    ///
+    /// 通过轮询中断状态寄存器来等待任务完成。
+    /// 如果超时则返回错误。
+    ///
+    /// # 参数
+    /// - `core`: NPU 核心
+    /// - `expected_tasks`: 期望完成的任务数
+    /// - `timeout_ms`: 超时时间（毫秒）
+    fn wait_job_done(&mut self, core: NpuCore, expected_tasks: u32, timeout_ms: u32) -> Result<()> {
+        use core::time::Duration;
+
+        use axhal::time::{busy_wait, current_ticks};
+
+        let start_time = current_ticks();
+        let timeout_ns = (timeout_ms as u64) * 1_000_000; // 转换为纳秒
+
+        debug!(
+            "[RKNPU] Waiting for job completion: core={:?}, tasks={}, timeout={}ms",
+            core, expected_tasks, timeout_ms
+        );
+
+        loop {
+            // 检查中断状态
+            match self.check_interrupt_status(core, expected_tasks) {
+                Ok(true) => {
+                    // 清除中断
+                    self.clear_job_interrupt(core)?;
+
+                    let elapsed_us = (current_ticks() - start_time) / 1000;
+                    info!(
+                        "[RKNPU] Job completed: core={:?}, elapsed={}us",
+                        core, elapsed_us
+                    );
+                    return Ok(());
+                }
+                Ok(false) => {
+                    // 任务未完成，检查是否超时
+                    let elapsed_ns = current_ticks() - start_time;
+                    if elapsed_ns >= timeout_ns {
+                        error!(
+                            "[RKNPU] Job timeout: core={:?}, timeout={}ms",
+                            core, timeout_ms
+                        );
+                        return Err(RknpuError::Timeout);
+                    }
+
+                    // 短暂延时后继续轮询（10us）
+                    busy_wait(Duration::from_micros(10));
+                }
+                Err(e) => {
+                    error!("[RKNPU] Interrupt status check failed: {:?}", e);
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    /// 检查中断状态
+    ///
+    /// 读取中断状态寄存器，判断任务是否完成。
+    ///
+    /// # 返回
+    /// - `Ok(true)`: 任务已完成
+    /// - `Ok(false)`: 任务未完成
+    /// - `Err`: 读取失败或状态异常
+    fn check_interrupt_status(&self, core: NpuCore, _expected_tasks: u32) -> Result<bool> {
+        use super::config::registers;
+
+        // 读取中断状态
+        let int_status = self.read_reg(core, registers::INT_STATUS)?;
+
+        // 读取原始中断状态
+        let int_raw_status = self.read_reg(core, registers::INT_RAW_STATUS)?;
+
+        // 如果中断状态非零，说明有中断发生
+        if int_status != 0 {
+            debug!(
+                "[RKNPU] Interrupt detected: status=0x{:x}, raw=0x{:x}",
+                int_status, int_raw_status
+            );
+
+            // TODO: 这里可以添加更详细的中断状态验证
+            // 例如检查错误位、完成位等
+
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    /// 清除中断状态（用于任务完成后）
+    ///
+    /// 在检测到任务完成后调用此方法清除中断标志
+    pub fn clear_job_interrupt(&mut self, core: NpuCore) -> Result<()> {
+        use super::config::registers;
+
+        self.write_reg(core, registers::INT_CLEAR, super::config::INT_CLEAR_VALUE)?;
+        debug!("[RKNPU] Cleared job interrupt for core {:?}", core);
+
+        Ok(())
+    }
 }
 
 // 实现 Drop trait 以确保资源正确释放

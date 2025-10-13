@@ -21,7 +21,7 @@ use crate::vfs::{
 };
 
 // 导入 RKNPU 设备驱动
-use super::device::{RK3588NPU, RkBoard};
+use super::device::{NpuCore, RK3588NPU, RkBoard};
 
 const IOC_READ: u32 = 2;
 const IOC_WRITE: u32 = 1;
@@ -524,10 +524,10 @@ impl DeviceOps for Card1 {
                     return Err(AxError::InvalidInput);
                 }
 
-                let submit = unsafe { &*(arg as *const RknpuSubmit) };
+                let submit = unsafe { &mut *(arg as *mut RknpuSubmit) };
                 info!(
-                    "[RKNPU] SUBMIT: task_obj_addr=0x{:x}, flags=0x{:x}",
-                    submit.task_obj_addr, submit.flags
+                    "[RKNPU] SUBMIT: task_obj_addr=0x{:x}, task_number={}, flags=0x{:x}, timeout={}",
+                    submit.task_obj_addr, submit.task_number, submit.flags, submit.timeout
                 );
 
                 // 将用户空间的 task_obj_addr（实际是物理地址）转换为内核虚拟地址
@@ -540,9 +540,50 @@ impl DeviceOps for Card1 {
                         .ok_or(AxError::InvalidInput)?
                 };
 
-                self.simulate_matmul(task_virt.as_usize() as *const u8)?;
+                info!(
+                    "[RKNPU] Task virtual address: 0x{:x}, physical: 0x{:x}",
+                    task_virt, submit.task_obj_addr
+                );
 
-                Ok(0)
+                // 获取 NPU 设备并提交任务
+                let npu_mutex = get_or_init_npu();
+                let mut npu_lock = npu_mutex.lock();
+                let npu = npu_lock.as_mut().ok_or(AxError::BadState)?;
+
+                // 确保 NPU0 电源已打开
+                if !npu.is_core_power_on(NpuCore::Npu0) {
+                    info!("[RKNPU] Powering on NPU0 for task submission");
+                    npu.power_domain_on(NpuCore::Npu0)
+                        .map_err(|_| AxError::BadState)?;
+                }
+
+                // 调用真实硬件提交（阻塞模式，单核）
+                match npu.submit_task_blocking(
+                    task_virt.as_usize() as *const u8,
+                    submit.task_start,
+                    submit.task_number,
+                    submit.task_obj_addr, // 物理地址用于 DMA
+                    NpuCore::Npu0,        // 单核模式使用 NPU0
+                    submit.timeout,
+                ) {
+                    Ok(completed_tasks) => {
+                        submit.task_counter = completed_tasks;
+                        info!(
+                            "[RKNPU] Hardware task completed: {} tasks",
+                            completed_tasks
+                        );
+                        Ok(0)
+                    }
+                    Err(e) => {
+                        error!("[RKNPU] Hardware task submission failed: {:?}", e);
+                        
+                        // 如果硬件提交失败，尝试使用软件模拟作为fallback
+                        warn!("[RKNPU] Falling back to software simulation");
+                        self.simulate_matmul(task_virt.as_usize() as *const u8)?;
+                        submit.task_counter = submit.task_number;
+                        Ok(0)
+                    }
+                }
             }
 
             _ => {

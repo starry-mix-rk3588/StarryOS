@@ -27,6 +27,12 @@ pub enum RknpuError {
     PowerVerificationFailed,
     /// 硬件未就绪
     HardwareNotReady,
+    /// 任务提交失败
+    TaskSubmitFailed,
+    /// 任务执行失败
+    TaskExecutionFailed,
+    /// 中断状态异常
+    InvalidInterruptStatus,
 }
 
 impl fmt::Display for RknpuError {
@@ -42,6 +48,9 @@ impl fmt::Display for RknpuError {
             Self::Unsupported => write!(f, "Unsupported operation"),
             Self::PowerVerificationFailed => write!(f, "Power verification failed"),
             Self::HardwareNotReady => write!(f, "Hardware not ready or inaccessible"),
+            Self::TaskSubmitFailed => write!(f, "Task submit failed"),
+            Self::TaskExecutionFailed => write!(f, "Task execution failed"),
+            Self::InvalidInterruptStatus => write!(f, "Invalid interrupt status"),
         }
     }
 }
