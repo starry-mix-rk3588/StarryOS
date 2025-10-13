@@ -1,5 +1,8 @@
 use alloc::collections::BTreeMap;
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::{
+    ptr::NonNull,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 use axalloc::{GlobalPage, UsageKind, global_allocator};
 use axhal::mem::{phys_to_virt, virt_to_phys};
@@ -16,6 +19,9 @@ use crate::vfs::{
     DeviceOps,
     dev::{Any, AxError, NodeFlags, VfsResult},
 };
+
+// 导入 RKNPU 设备驱动
+use super::device::{RK3588NPU, RkBoard};
 
 const IOC_READ: u32 = 2;
 const IOC_WRITE: u32 = 1;
@@ -169,6 +175,12 @@ impl Drop for NpuMemManager {
 
 static NPU_MEM_MANAGER: Mutex<Option<NpuMemManager>> = Mutex::new(None);
 
+// RK3588 NPU 基地址（从设备树或硬件手册获取）
+const RK3588_NPU_BASE_ADDR: usize = 0xfd8d8000;
+
+/// RK3588 NPU 设备全局实例
+static RK3588_NPU: Mutex<Option<RK3588NPU>> = Mutex::new(None);
+
 fn get_mem_manager() -> &'static Mutex<Option<NpuMemManager>> {
     &NPU_MEM_MANAGER
 }
@@ -181,6 +193,34 @@ fn init_mem_manager() {
             Err(e) => error!("[RKNPU] Failed to initialize memory manager: {:?}", e),
         }
     }
+}
+
+/// 获取或初始化 RK3588 NPU 设备
+fn get_or_init_npu() -> &'static Mutex<Option<RK3588NPU>> {
+    let mut npu = RK3588_NPU.lock();
+    if npu.is_none() {
+        info!("[RKNPU] Initializing RK3588 NPU device...");
+        
+        // 创建 NPU 基地址指针
+        let npu_base = unsafe { NonNull::new_unchecked(RK3588_NPU_BASE_ADDR as *mut u8) };
+        
+        // 创建 RK3588NPU 实例
+        let mut device = RK3588NPU::new(npu_base, RkBoard::Rk3588);
+        
+        // 执行硬件初始化
+        match device.init() {
+            Ok(()) => {
+                info!("[RKNPU] RK3588 NPU device initialized successfully");
+                *npu = Some(device);
+            }
+            Err(e) => {
+                error!("[RKNPU] Failed to initialize RK3588 NPU device: {:?}", e);
+            }
+        }
+    }
+    
+    drop(npu);
+    &RK3588_NPU
 }
 
 pub struct Card1;
@@ -366,7 +406,11 @@ impl DeviceOps for Card1 {
     }
 
     fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
+        // 初始化内存管理器
         init_mem_manager();
+        
+        // 初始化 NPU 设备（延迟初始化，只在首次调用时执行）
+        get_or_init_npu();
 
         match cmd {
             DRM_IOCTL_VERSION => {
