@@ -134,6 +134,7 @@ starry-signal.workspace = true
 
 starry-core.workspace = true
 starry-api.workspace = true
+axconfig.workspace = true
 
 [dependencies.axplat-riscv64-visionfive2]
 git = "https://github.com/Starry-OS/axplat-riscv64-visionfive2.git"

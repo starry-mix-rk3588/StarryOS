@@ -8,28 +8,21 @@
 //! RK3588 NPU 的电源由 PMU (Power Management Unit) 控制，通过操作 PMU 寄存器来
 //! 打开/关闭各个 NPU 核心的电源域。
 //!
-//! PMU 寄存器基地址: 0xFD8D8000 (PMU1)
-//! 电源域控制通过 PWR_CON 和 PWR_ST 寄存器实现。
+//! 所有硬件地址定义在 config::addresses 模块中。
 
 use core::{
     ptr::NonNull,
     sync::atomic::{AtomicBool, AtomicU32, Ordering},
 };
 
-use super::types::{NpuCore, PowerState, Result, RknpuError};
-
-/// RK3588 PMU 寄存器基地址
-const RK3588_PMU1_BASE: usize = 0xFD8D8000;
-
-/// RK3588 CRU (Clock & Reset Unit) 寄存器基地址
-const RK3588_CRU_BASE: usize = 0xFD7C0000;
+use super::{
+    config::addresses,
+    types::{NpuCore, PowerState, Result, RknpuError},
+};
 
 /// RK806 PMIC I2C 地址 (通常通过 I2C 总线访问)
 /// 注意：RK806 PMIC 通过 I2C6 连接，需要先初始化 I2C 控制器
 const RK806_I2C_ADDR: u8 = 0x0A;
-
-/// GPIO 基地址 (用于控制某些电源使能引脚)
-const RK3588_GPIO3_BASE: usize = 0xFEC40000;
 
 /// PMU 电源域控制寄存器偏移
 /// 这些寄存器用于控制各个电源域的开关
@@ -130,11 +123,22 @@ impl PowerDomainController {
     ///
     /// # 返回
     /// 新创建的电源域控制器实例，所有核心初始状态为关闭
+    ///
+    /// # 注意
+    /// 硬件基地址从 config::addresses 自动获取
     pub fn new(num_cores: usize) -> Self {
         // 获取各个硬件模块的基地址
-        let pmu_base = unsafe { NonNull::new(RK3588_PMU1_BASE as *mut u8) };
-        let cru_base = unsafe { NonNull::new(RK3588_CRU_BASE as *mut u8) };
-        let gpio_base = unsafe { NonNull::new(RK3588_GPIO3_BASE as *mut u8) };
+        let pmu_base = unsafe { NonNull::new(addresses::PMU1_BASE as *mut u8) };
+        let cru_base = unsafe { NonNull::new(addresses::CRU_BASE as *mut u8) };
+        let gpio_base = unsafe { NonNull::new(addresses::GPIO3_BASE as *mut u8) };
+
+        info!(
+            "[RKNPU Power] Initializing power controller for {} cores",
+            num_cores
+        );
+        debug!("[RKNPU Power] PMU base: 0x{:x}", addresses::PMU1_BASE);
+        debug!("[RKNPU Power] CRU base: 0x{:x}", addresses::CRU_BASE);
+        debug!("[RKNPU Power] GPIO base: 0x{:x}", addresses::GPIO3_BASE);
 
         Self {
             core_states: [
@@ -179,10 +183,10 @@ impl PowerDomainController {
         info!("[RKNPU Power] Powering on core {:?}", core);
 
         // 1. 启用电压调节器 (VDD)
-        self.enable_regulator_vdd(core)?;
+        // self.enable_regulator_vdd(core)?;
 
-        // 2. 启用电压调节器 (MEM)
-        self.enable_regulator_mem(core)?;
+        // // 2. 启用电压调节器 (MEM)
+        // self.enable_regulator_mem(core)?;
 
         // 3. 启用时钟
         self.enable_clocks(core)?;

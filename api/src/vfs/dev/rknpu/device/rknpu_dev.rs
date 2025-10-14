@@ -19,13 +19,10 @@ use super::{
 /// # 示例
 ///
 /// ```no_run
-/// use core::ptr::NonNull;
-///
 /// use rknpu_device::{NPU1, NPU2, RK3588NPU, RkBoard};
 ///
-/// // 初始化 NPU (基地址需要从设备树获取)
-/// let npu_base = unsafe { NonNull::new_unchecked(0xfd8d8000 as *mut u8) };
-/// let mut rknpu = RK3588NPU::new(npu_base, RkBoard::Rk3588);
+/// // 初始化 NPU (地址从配置自动获取)
+/// let mut rknpu = RK3588NPU::new(RkBoard::Rk3588);
 ///
 /// // 单独控制电源域
 /// rknpu.power_domain_on(NPU1).unwrap();
@@ -54,7 +51,6 @@ impl RK3588NPU {
     /// 创建新的 RKNPU 设备实例
     ///
     /// # 参数
-    /// - `base_addr`: NPU 第一个核心的寄存器基地址（来自设备树）
     /// - `board`: 板型标识
     ///
     /// # 返回
@@ -63,34 +59,32 @@ impl RK3588NPU {
     /// # 注意
     /// 此函数只创建设备结构，不会执行硬件初始化。
     /// 需要调用 `init()` 方法来完成初始化。
-    pub fn new(base_addr: NonNull<u8>, board: RkBoard) -> Self {
+    /// 所有硬件基地址从配置中自动获取，无需手动传入。
+    pub fn new(board: RkBoard) -> Self {
         let config = RknpuConfig::from_board(board);
         let num_cores = config.num_cores();
 
         info!(
-            "[RKNPU] Creating device for {:?} with {} cores at 0x{:x}",
-            board,
-            num_cores,
-            base_addr.as_ptr() as usize
+            "[RKNPU] Creating device for {:?} with {} cores",
+            board, num_cores
         );
 
+        // 根据配置获取各核心基地址
         let mut base_addrs = [None; 3];
-        base_addrs[0] = Some(base_addr);
+        for i in 0..num_cores {
+            if let Some(core) = NpuCore::from_index(i) {
+                if let Some(addr) = config.get_core_base_addr(core) {
+                    let base_ptr = unsafe { NonNull::new(addr as *mut u8) };
+                    base_addrs[i] = base_ptr;
 
-        // 为多核心配置计算其他核心的基地址
-        // 基于 RK3588 的地址布局，每个核心间隔 0x10000
-        if num_cores > 1 {
-            for i in 1..num_cores {
-                let offset = (i * 0x10000) as isize;
-                let core_base =
-                    unsafe { NonNull::new_unchecked(base_addr.as_ptr().offset(offset)) };
-                base_addrs[i] = Some(core_base);
-
-                debug!(
-                    "[RKNPU] Core {} base address: 0x{:x}",
-                    i,
-                    core_base.as_ptr() as usize
-                );
+                    if let Some(ptr) = base_ptr {
+                        debug!(
+                            "[RKNPU] Core {} base address: 0x{:x}",
+                            i,
+                            ptr.as_ptr() as usize
+                        );
+                    }
+                }
             }
         }
 
@@ -116,8 +110,8 @@ impl RK3588NPU {
     /// 初始化 NPU 设备
     ///
     /// 执行必要的硬件初始化操作，包括：
-    /// 1. 检查硬件版本
-    /// 2. 配置寄存器
+    /// 1. 打开所有核心电源
+    /// 2. 检查硬件版本
     /// 3. 清除中断状态
     ///
     /// # 返回
@@ -130,20 +124,24 @@ impl RK3588NPU {
 
         info!("[RKNPU] Initializing device");
 
-        // 1. 读取并验证硬件版本
+        // 1. 打开所有核心电源
+        info!("[RKNPU] Powering on all cores");
+        self.power_on()?;
+
+        // 2. 读取并验证硬件版本
         self.check_hardware_version()?;
 
-        // 2. 清除所有核心的中断状态
+        // 3. 清除所有核心的中断状态
         for i in 0..self.config.num_cores() {
             if let Some(core) = NpuCore::from_index(i) {
                 self.clear_interrupts(core)?;
             }
         }
 
-        // 3. 标记为已初始化
+        // 4. 标记为已初始化
         self.initialized = true;
 
-        info!("[RKNPU] Device initialized successfully");
+        info!("[RKNPU] Device initialized successfully (all cores powered on)");
 
         Ok(())
     }
@@ -840,8 +838,7 @@ mod tests {
 
     #[test]
     fn test_device_creation() {
-        let base = unsafe { NonNull::new_unchecked(0x1000 as *mut u8) };
-        let device = RK3588NPU::new(base, RkBoard::Rk3588);
+        let device = RK3588NPU::new(RkBoard::Rk3588);
 
         assert_eq!(device.board(), RkBoard::Rk3588);
         assert_eq!(device.num_cores(), 3);
@@ -850,8 +847,7 @@ mod tests {
 
     #[test]
     fn test_core_availability() {
-        let base = unsafe { NonNull::new_unchecked(0x1000 as *mut u8) };
-        let device = RK3588NPU::new(base, RkBoard::Rk3588);
+        let device = RK3588NPU::new(RkBoard::Rk3588);
 
         assert!(device.is_core_available(NpuCore::Npu0));
         assert!(device.is_core_available(NpuCore::Npu1));
@@ -860,8 +856,7 @@ mod tests {
 
     #[test]
     fn test_single_core_device() {
-        let base = unsafe { NonNull::new_unchecked(0x1000 as *mut u8) };
-        let device = RK3588NPU::new(base, RkBoard::Rk3568);
+        let device = RK3588NPU::new(RkBoard::Rk3568);
 
         assert_eq!(device.num_cores(), 1);
         assert!(device.is_core_available(NpuCore::Npu0));

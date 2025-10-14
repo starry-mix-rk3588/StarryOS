@@ -8,14 +8,14 @@
 //! RK3588 NPU 的复位由 CRU (Clock & Reset Unit) 控制，通过操作 CRU 寄存器来
 //! 执行 AXI 和 AHB 总线复位。
 //!
-//! CRU 寄存器基地址: 0xFD7C0000
+//! 所有硬件地址定义在 config::addresses 模块中。
 
 use core::ptr::NonNull;
 
-use super::types::{NpuCore, ResetType, Result, RknpuError};
-
-/// RK3588 CRU 寄存器基地址
-const RK3588_CRU_BASE: usize = 0xFD7C0000;
+use super::{
+    config::addresses,
+    types::{NpuCore, ResetType, Result, RknpuError},
+};
 
 /// CRU 软复位控制寄存器偏移
 mod cru_softrst_regs {
@@ -64,9 +64,15 @@ impl ResetController {
     ///
     /// # 返回
     /// 新创建的复位控制器实例
+    ///
+    /// # 注意
+    /// CRU 基地址从 config::addresses 自动获取
     pub fn new(num_cores: usize) -> Self {
         // 获取 CRU 基地址
-        let cru_base = unsafe { NonNull::new(RK3588_CRU_BASE as *mut u8) };
+        let cru_base = unsafe { NonNull::new(addresses::CRU_BASE as *mut u8) };
+
+        info!("[RKNPU Reset] Initializing reset controller for {} cores", num_cores);
+        debug!("[RKNPU Reset] CRU base: 0x{:x}", addresses::CRU_BASE);
 
         Self {
             base_addrs: [None; 3],

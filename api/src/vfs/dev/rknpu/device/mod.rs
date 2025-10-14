@@ -13,13 +13,10 @@
 //! # 示例
 //!
 //! ```no_run
-//! use core::ptr::NonNull;
-//!
 //! use rknpu_device::{NPU0, NPU1, NPU2, RK3588NPU, RkBoard};
 //!
-//! // 初始化 NPU (基地址需要从设备树获取)
-//! let npu_base = unsafe { NonNull::new_unchecked(0xfd8d8000 as *mut u8) };
-//! let mut rknpu = RK3588NPU::new(npu_base, RkBoard::Rk3588);
+//! // 初始化 NPU (地址从配置自动获取)
+//! let mut rknpu = RK3588NPU::new(RkBoard::Rk3588);
 //!
 //! // 初始化硬件
 //! rknpu.init().unwrap();
@@ -59,9 +56,9 @@ pub mod examples;
 
 // 重新导出公共接口
 pub use config::{
-    INVALID_REG_VALUE_ALL_ONE, INVALID_REG_VALUE_ALL_ZERO, POWER_OFF_VERIFY_TIMEOUT_US,
-    POWER_ON_VERIFY_POLL_INTERVAL_US, POWER_ON_VERIFY_TIMEOUT_US, RK3588_NPU_VERSION, RknpuConfig,
-    registers,
+    addresses, registers, INVALID_REG_VALUE_ALL_ONE, INVALID_REG_VALUE_ALL_ZERO,
+    POWER_OFF_VERIFY_TIMEOUT_US, POWER_ON_VERIFY_POLL_INTERVAL_US, POWER_ON_VERIFY_TIMEOUT_US,
+    RK3588_NPU_VERSION, RknpuConfig,
 };
 pub use rknpu_dev::RK3588NPU;
 pub use types::{

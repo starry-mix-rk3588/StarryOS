@@ -3,7 +3,42 @@
 //! 本模块定义了不同 Rockchip 芯片的 NPU 硬件配置参数。
 //! 配置参数基于 Linux 内核驱动 crates/rknpu/rknpu_drv.c 中的定义。
 
-use super::types::RkBoard;
+use super::types::{NpuCore, RkBoard};
+
+/// RK3588 NPU 硬件地址映射
+///
+/// 这些地址来自设备树 (rk3588-orangepi-5-plus.dts) 和硬件手册。
+/// 所有地址均为物理地址，需要通过 MMU 映射后才能访问。
+pub mod addresses {
+    /// NPU 核心寄存器基地址
+    /// 
+    /// 来自设备树: npu@fdab0000
+    /// reg = <0x00 0xfdab0000 0x00 0x10000    # NPU0 核心
+    ///        0x00 0xfdac0000 0x00 0x10000    # NPU1 核心  
+    ///        0x00 0xfdad0000 0x00 0x10000>;  # NPU2 核心
+    pub const NPU0_BASE: usize = 0xFDAB0000;
+    pub const NPU1_BASE: usize = 0xFDAC0000;
+    pub const NPU2_BASE: usize = 0xFDAD0000;
+    
+    /// 每个核心的寄存器空间大小 (64KB)
+    pub const NPU_CORE_SIZE: usize = 0x10000;
+    
+    /// PMU1 (电源管理单元) 基地址
+    /// 
+    /// 来自设备树: power-management@fd8d8000
+    /// 用于控制 NPU 各核心的电源域开关
+    pub const PMU1_BASE: usize = 0xFD8D8000;
+    
+    /// CRU (时钟复位单元) 基地址
+    /// 
+    /// 用于控制 NPU 时钟门控和软复位
+    pub const CRU_BASE: usize = 0xFD7C0000;
+    
+    /// GPIO3 基地址
+    /// 
+    /// 用于某些电源控制引脚的 GPIO 操作
+    pub const GPIO3_BASE: usize = 0xFEC40000;
+}
 
 /// RKNPU 寄存器偏移量定义
 pub mod registers {
@@ -255,6 +290,35 @@ impl RknpuConfig {
             return false;
         }
         (self.core_mask & (1 << core)) != 0
+    }
+
+    /// 获取指定核心的寄存器基地址
+    ///
+    /// # 参数
+    /// - `core`: NPU 核心标识
+    ///
+    /// # 返回
+    /// - `Some(usize)`: 核心的物理基地址
+    /// - `None`: 核心不可用或索引越界
+    ///
+    /// # 示例
+    /// ```
+    /// let config = RknpuConfig::RK3588;
+    /// assert_eq!(config.get_core_base_addr(NpuCore::Npu0), Some(0xFDAB0000));
+    /// assert_eq!(config.get_core_base_addr(NpuCore::Npu1), Some(0xFDAC0000));
+    /// assert_eq!(config.get_core_base_addr(NpuCore::Npu2), Some(0xFDAD0000));
+    /// ```
+    pub fn get_core_base_addr(&self, core: NpuCore) -> Option<usize> {
+        let index = core.index();
+        if !self.is_core_available(index) {
+            return None;
+        }
+        
+        match core {
+            NpuCore::Npu0 => Some(addresses::NPU0_BASE),
+            NpuCore::Npu1 => Some(addresses::NPU1_BASE),
+            NpuCore::Npu2 => Some(addresses::NPU2_BASE),
+        }
     }
 }
 

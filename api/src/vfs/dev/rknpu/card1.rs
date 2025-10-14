@@ -175,9 +175,6 @@ impl Drop for NpuMemManager {
 
 static NPU_MEM_MANAGER: Mutex<Option<NpuMemManager>> = Mutex::new(None);
 
-// RK3588 NPU 基地址（从设备树或硬件手册获取）
-const RK3588_NPU_BASE_ADDR: usize = 0xfd8d8000;
-
 /// RK3588 NPU 设备全局实例
 static RK3588_NPU: Mutex<Option<RK3588NPU>> = Mutex::new(None);
 
@@ -201,11 +198,8 @@ fn get_or_init_npu() -> &'static Mutex<Option<RK3588NPU>> {
     if npu.is_none() {
         info!("[RKNPU] Initializing RK3588 NPU device...");
         
-        // 创建 NPU 基地址指针
-        let npu_base = unsafe { NonNull::new_unchecked(RK3588_NPU_BASE_ADDR as *mut u8) };
-        
-        // 创建 RK3588NPU 实例
-        let mut device = RK3588NPU::new(npu_base, RkBoard::Rk3588);
+        // 创建 RK3588NPU 实例 (地址从配置自动获取)
+        let mut device = RK3588NPU::new(RkBoard::Rk3588);
         
         // 执行硬件初始化
         match device.init() {
