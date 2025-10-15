@@ -67,6 +67,7 @@ syscalls = { git = "https://github.com/jasonwhite/syscalls.git", rev = "92624de"
 zerocopy = { version = "0.8.26", features = ["derive"] }
 bstr = { version = "1.9.0", default-features = false, features = ["alloc"] }
 rk3588-rs ={ path = "../crates/rknpu2-rslab/rk3588-rs", default-features = false , features = ["no_std"]}
+rockchip-pm ={ git = "https://github.com/drivercraft/rockchip-pm.git" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86 = "0.52"

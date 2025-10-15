@@ -15,6 +15,8 @@ use core::{
     sync::atomic::{AtomicBool, AtomicU32, Ordering},
 };
 
+use axhal::mem::phys_to_virt;
+
 use super::{
     config::addresses,
     types::{NpuCore, PowerState, Result, RknpuError},
@@ -128,9 +130,9 @@ impl PowerDomainController {
     /// 硬件基地址从 config::addresses 自动获取
     pub fn new(num_cores: usize) -> Self {
         // 获取各个硬件模块的基地址
-        let pmu_base = unsafe { NonNull::new(addresses::PMU1_BASE as *mut u8) };
-        let cru_base = unsafe { NonNull::new(addresses::CRU_BASE as *mut u8) };
-        let gpio_base = unsafe { NonNull::new(addresses::GPIO3_BASE as *mut u8) };
+        let pmu_base = unsafe { NonNull::new(phys_to_virt( addresses::PMU1_BASE.into()).as_mut_ptr()) };
+        let cru_base = unsafe { NonNull::new(phys_to_virt(addresses::CRU_BASE.into()).as_mut_ptr()) };
+        let gpio_base = unsafe { NonNull::new(phys_to_virt(addresses::GPIO3_BASE.into()).as_mut_ptr()) };
 
         info!(
             "[RKNPU Power] Initializing power controller for {} cores",
@@ -183,10 +185,10 @@ impl PowerDomainController {
         info!("[RKNPU Power] Powering on core {:?}", core);
 
         // 1. 启用电压调节器 (VDD)
-        // self.enable_regulator_vdd(core)?;
+        self.enable_regulator_vdd(core)?;
 
         // // 2. 启用电压调节器 (MEM)
-        // self.enable_regulator_mem(core)?;
+        self.enable_regulator_mem(core)?;
 
         // 3. 启用时钟
         self.enable_clocks(core)?;

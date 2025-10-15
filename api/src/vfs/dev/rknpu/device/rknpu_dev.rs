@@ -5,12 +5,24 @@
 
 use core::ptr::NonNull;
 
+use rockchip_pm::{ RockchipPM};
+use rockchip_pm::PD;
 use super::{
     config::RknpuConfig,
+    config::addresses,
     power::PowerDomainController,
     reset::ResetController,
     types::{NpuCore, PowerState, ResetType, Result, RkBoard, RknpuError},
 };
+use axhal::mem::phys_to_virt;
+/// NPU 主电源域
+pub const NPU: PD = PD(8);
+/// NPU TOP 电源域  
+pub const NPUTOP: PD = PD(9);
+/// NPU1 电源域
+pub const NPU1: PD = PD(10);
+/// NPU2 电源域
+pub const NPU2: PD = PD(11);
 
 /// RK3588 NPU 设备
 ///
@@ -126,7 +138,16 @@ impl RK3588NPU {
 
         // 1. 打开所有核心电源
         info!("[RKNPU] Powering on all cores");
-        self.power_on()?;
+
+        let pmu_base =
+            unsafe { NonNull::new(phys_to_virt(addresses::PMU1_BASE.into()).as_mut_ptr()).unwrap() };
+        let mut pm = RockchipPM::new(pmu_base, rockchip_pm::RkBoard::Rk3588);
+        pm.power_domain_on(NPU1).unwrap();
+        pm.power_domain_off(NPU2).unwrap();
+        pm.power_domain_on(NPU).unwrap();
+        pm.power_domain_on(NPUTOP).unwrap();
+
+        // self.power_on()?;
 
         // 2. 读取并验证硬件版本
         self.check_hardware_version()?;
@@ -135,6 +156,7 @@ impl RK3588NPU {
         for i in 0..self.config.num_cores() {
             if let Some(core) = NpuCore::from_index(i) {
                 self.clear_interrupts(core)?;
+                break;
             }
         }
 
@@ -518,6 +540,8 @@ impl RK3588NPU {
                     "[RKNPU] Core {:?} - Version: 0x{:x}, Version Num: 0x{:x}",
                     core, version, version_num
                 );
+
+                break;  
             }
         }
 
@@ -558,7 +582,7 @@ impl RK3588NPU {
     ///
     /// # 示例
     /// ```no_run
-    /// use rknpu_device::{RK3588NPU, NpuCore};
+    /// use rknpu_device::{NpuCore, RK3588NPU};
     ///
     /// let mut npu = RK3588NPU::new(base_addr, RkBoard::Rk3588);
     /// npu.init()?;
@@ -566,11 +590,11 @@ impl RK3588NPU {
     ///
     /// let task_count = npu.submit_task_blocking(
     ///     task_ptr,
-    ///     0,              // task_start
-    ///     10,             // task_number
+    ///     0,  // task_start
+    ///     10, // task_number
     ///     task_phys_addr,
     ///     NpuCore::Npu0,
-    ///     5000,           // 5 秒超时
+    ///     5000, // 5 秒超时
     /// )?;
     /// ```
     pub fn submit_task_blocking(
@@ -602,10 +626,7 @@ impl RK3588NPU {
         self.wait_job_done(core, task_number, timeout_ms)?;
 
         // 3. 返回完成的任务数
-        info!(
-            "[RKNPU] Task completed successfully: {} tasks",
-            task_number
-        );
+        info!("[RKNPU] Task completed successfully: {} tasks", task_number);
 
         Ok(task_number)
     }
@@ -632,7 +653,7 @@ impl RK3588NPU {
         task_base_phys: u64,
         core: NpuCore,
     ) -> Result<()> {
-        use super::config::{registers, PC_DATA_EXTRA_AMOUNT};
+        use super::config::{PC_DATA_EXTRA_AMOUNT, registers};
 
         // RknpuTask 的大小（从 C 代码中的 packed struct）
         const TASK_SIZE: usize = 40; // sizeof(RknpuTask)

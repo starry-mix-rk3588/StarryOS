@@ -12,6 +12,9 @@
 
 use core::ptr::NonNull;
 
+use axhal::mem::phys_to_virt;
+use memory_addr::PhysAddr;
+
 use super::{
     config::addresses,
     types::{NpuCore, ResetType, Result, RknpuError},
@@ -69,7 +72,7 @@ impl ResetController {
     /// CRU 基地址从 config::addresses 自动获取
     pub fn new(num_cores: usize) -> Self {
         // 获取 CRU 基地址
-        let cru_base = unsafe { NonNull::new(addresses::CRU_BASE as *mut u8) };
+        let cru_base = unsafe { NonNull::new(phys_to_virt(PhysAddr::from_usize( addresses::CRU_BASE)).as_mut_ptr()) };
 
         info!("[RKNPU Reset] Initializing reset controller for {} cores", num_cores);
         debug!("[RKNPU Reset] CRU base: 0x{:x}", addresses::CRU_BASE);

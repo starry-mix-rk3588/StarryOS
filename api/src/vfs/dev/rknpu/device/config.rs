@@ -3,6 +3,8 @@
 //! 本模块定义了不同 Rockchip 芯片的 NPU 硬件配置参数。
 //! 配置参数基于 Linux 内核驱动 crates/rknpu/rknpu_drv.c 中的定义。
 
+use axhal::mem::phys_to_virt;
+
 use super::types::{NpuCore, RkBoard};
 
 /// RK3588 NPU 硬件地址映射
@@ -97,10 +99,10 @@ pub const POWER_ON_VERIFY_POLL_INTERVAL_US: u32 = 10; // 10us
 /// 电源关闭验证超时时间 (微秒)
 pub const POWER_OFF_VERIFY_TIMEOUT_US: u32 = 100_000; // 100ms
 
-/// RK3588 NPU 预期版本号 (v6.0.2)
+/// RK3588 NPU 预期版本号 
 ///
 /// 从版本寄存器读取时应返回此值，用于验证硬件是否正确初始化
-pub const RK3588_NPU_VERSION: u32 = 0x60002;
+pub const RK3588_NPU_VERSION: u32 = 0x46495245;
 
 /// 无效寄存器值 - 全零
 ///
@@ -315,9 +317,9 @@ impl RknpuConfig {
         }
         
         match core {
-            NpuCore::Npu0 => Some(addresses::NPU0_BASE),
-            NpuCore::Npu1 => Some(addresses::NPU1_BASE),
-            NpuCore::Npu2 => Some(addresses::NPU2_BASE),
+            NpuCore::Npu0 => Some(phys_to_virt(addresses::NPU0_BASE.into()).as_usize()),
+            NpuCore::Npu1 => Some(phys_to_virt(addresses::NPU1_BASE.into()).as_usize()),
+            NpuCore::Npu2 => Some(phys_to_virt(addresses::NPU2_BASE.into()).as_usize()),
         }
     }
 }
