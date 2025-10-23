@@ -1,5 +1,6 @@
 // pub mod card0;
 pub mod card1;
+pub mod card0;
 pub(crate) mod device;
 
 use crate::vfs::{

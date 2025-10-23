@@ -2215,6 +2215,7 @@ dependencies = [
 name = "rknpu-driver"
 version = "0.1.0"
 dependencies = [
+ "log",
  "rk3588-rs",
  "rockchip-pm",
  "tock-registers 0.10.0",
