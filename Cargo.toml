@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["api", "core"]
+members = ["api", "core", "crates/rknpu-driver"]
 exclude = ["arceos"]
 
 [workspace.package]
@@ -169,6 +169,9 @@ starry-signal = { git = "https://github.com/Starry-OS/starry-signal.git", rev = 
 starry-vm = { git = "https://github.com/Starry-OS/starry-vm.git", rev = "e2a50e7" }
 axfs-ng-vfs = { git = "https://github.com/Starry-OS/axfs-ng-vfs.git", rev = "6cf8893" }
 axpoll = { git = "https://github.com/Starry-OS/axpoll.git", rev = "258cb5f" }
+
+[patch."https://github.com/starry-mix-rk3588/rknpu-driver.git".rknpu-driver]
+path = "crates/rknpu-driver"
 
 [package.metadata.vendor-filter]
 platforms = ["riscv64gc-unknown-none-elf", "loongarch64-unknown-none-softfloat"]

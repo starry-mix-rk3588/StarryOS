@@ -14,3 +14,9 @@
 [submodule "crates/rknpu2-rslab"]
 	path = crates/rknpu2-rslab
 	url = https://github.com/starry-mix-rk3588/rknpu2-rslab.git
+[submodule "crates/--force"]
+	path = crates/--force
+	url = https://github.com/starry-mix-rk3588/rknpu-driver.git
+[submodule "crates/rknpu-driver"]
+	path = crates/rknpu-driver
+	url = https://github.com/starry-mix-rk3588/rknpu-driver.git

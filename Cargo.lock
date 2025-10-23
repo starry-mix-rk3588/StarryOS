@@ -122,6 +122,20 @@ dependencies = [
 
 [[package]]
 name = "arm-gic-driver"
+version = "0.14.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a886a953642fbf21eb5928c49a05f021fae007219ae8cb2dafbf403dfeba974a"
+dependencies = [
+ "aarch64-cpu",
+ "bitflags 2.9.4",
+ "enum_dispatch",
+ "log",
+ "rdif-intc",
+ "tock-registers 0.9.0",
+]
+
+[[package]]
+name = "arm-gic-driver"
 version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f251a1a74133f802b55eaf5e340107b0024457aa9b2ac3c72074501bfa8509a5"
@@ -588,13 +602,16 @@ name = "axplat-aarch64-opi5p"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
+ "arm-gic-driver 0.14.9",
  "axconfig-macros",
  "axcpu",
  "axplat",
  "axplat-aarch64-peripherals 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dw_apb_uart",
+ "int_ratio",
  "kspin",
  "log",
+ "memory_addr",
  "page_table_entry",
 ]
 
@@ -2068,6 +2085,18 @@ dependencies = [
 
 [[package]]
 name = "rdif-base"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6953f438bbbdf58e55513c31e70fa0f85daba2927e8a59130a04608141bb552"
+dependencies = [
+ "as-any",
+ "async-trait",
+ "rdif-def",
+ "thiserror",
+]
+
+[[package]]
+name = "rdif-base"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f8c32d8cbc18633a412130719b07d31135215d1715ac48fc3888ca835a811ba"
@@ -2085,6 +2114,17 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c238eb44d86fabc99028adc973f896ce2202aeb6184cc8b89863f2d157d7ca06"
 dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "rdif-intc"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4e7622f78dc9b40958500119553f3c15b9bb9829002d87d0f4b114ebe302a40"
+dependencies = [
+ "cfg-if",
+ "rdif-base 0.6.0",
  "thiserror",
 ]
 
@@ -2172,6 +2212,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rknpu-driver"
+version = "0.1.0"
+dependencies = [
+ "rk3588-rs",
+ "rockchip-pm",
+ "tock-registers 0.10.0",
+]
+
+[[package]]
 name = "rlsf"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2192,7 +2241,7 @@ dependencies = [
  "dma-api",
  "log",
  "mbarrier",
- "rdif-base",
+ "rdif-base 0.7.0",
  "tock-registers 0.10.0",
 ]
 
@@ -2427,6 +2476,7 @@ dependencies = [
  "ringbuf",
  "riscv",
  "rk3588-rs",
+ "rknpu-driver",
  "rockchip-pm",
  "scope-local",
  "slab",
