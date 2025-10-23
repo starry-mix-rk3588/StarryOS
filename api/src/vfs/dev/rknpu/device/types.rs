@@ -59,6 +59,7 @@ impl fmt::Display for RknpuError {
 pub type Result<T> = core::result::Result<T, RknpuError>;
 
 /// Rockchip 板型枚举
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RkBoard {
     /// RK3588 - 3个 NPU 核心

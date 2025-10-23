@@ -1,23 +1,20 @@
 use crate::vfs::dev::*;
-use rk3588_rs::DrmVersion;
-use rknpu_driver::{RknpuDev, types::RkBoard, rknpu_ioctl};
-use axsync::Mutex;
-use axhal::mem::{phys_to_virt, virt_to_phys};
+use rknpu_driver::{rknpu_ioctl, types::RkBoard, RknpuDev};
+use axhal::mem::{phys_to_virt,  PhysAddr, pa};
+use core::ptr::NonNull;
 
-static RKNPU: Mutex<Option<RknpuDev>> = Mutex::new(None);
-const RKNPU_CORE_BASE: u64 = 0xFDAB0000;
+const RKNPU_CORE_BASE: PhysAddr = pa!(0xFDAB0000);
+const RKNU_PMU1_BASE: PhysAddr = pa!(0xFD8D8000);
+// static RKNPU: SpinNoIrq<RknpuDev> = SpinNoIrq::new(RknpuDev::new(phys_to_virt(RKNPU_CORE_BASE).as_usize(), RkBoard::Rk3588));
+use lazy_static::lazy_static;
 
-fn get_or_init_npu() -> VfsResult<&'static RknpuDev> {
-    let mut npu_lock = RKNPU.lock();
-    if npu_lock.is_none() {
-        let npu_base = unsafe {
-            NonNull::new(phys_to_virt(RKNPU_CORE_BASE.into()).as_mut_ptr()).unwrap()
-        };
-        let npu_dev = RknpuDev::new(npu_base, RkBoard::Rk3588);
-        npu_dev.initialize()?;
-        *npu_lock = Some(npu_dev);
-    }
-    Ok(npu_lock.as_ref().unwrap())
+lazy_static! {
+    static ref RKNPU: RknpuDev = {
+        let mut dev = RknpuDev::new(phys_to_virt(RKNPU_CORE_BASE).as_usize(), RkBoard::Rk3588);
+        let pmu_base = NonNull::new(phys_to_virt(RKNU_PMU1_BASE).as_mut_ptr()).unwrap();
+        dev.initialize(pmu_base).unwrap();
+        dev
+    };
 }
 
 pub struct Card0;
@@ -44,10 +41,10 @@ impl DeviceOps for Card0 {
     fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
         info!("card0 ioctl => cmd: {:#x}, arg: {:#x}", cmd, arg);
 
-        let rknpu = get_or_init_npu()?;
-        if let Err(error) = rknpu_ioctl(rknpu, cmd, arg) {
-            error!("card0 ioctl error => {}", error);
+        if let Err(_error) = rknpu_ioctl(&RKNPU, cmd, arg) {
+            // error!("card0 ioctl error => {}", error);
             // return Err(AxError::InvalidInput);
+            todo!()
         }
 
         VfsResult::Ok(0)

@@ -1,7 +1,7 @@
 // pub mod card0;
-pub mod card1;
+// pub mod card1;
 pub mod card0;
-pub(crate) mod device;
+// pub(crate) mod device;
 
 use crate::vfs::{
     DeviceOps,
@@ -29,7 +29,7 @@ impl DeviceOps for Card {
         NodeFlags::NON_CACHEABLE
     }
 
-    fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
+    fn ioctl(&self, _cmd: u32, _arg: usize) -> VfsResult<usize> {
         VfsResult::Ok(0)
     }
 }

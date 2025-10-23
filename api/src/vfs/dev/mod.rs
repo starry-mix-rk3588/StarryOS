@@ -143,12 +143,7 @@ impl DeviceOps for CpuDmaLatency {
 
 // mod drm;
 mod rknpu;
-use core::slice;
-
-use axdma::alloc_coherent;
-// use drm::*;
-use starry_vm::{VmMutPtr, vm_write_slice};
-use rknpu::card1::Card1;
+use rknpu::card0::Card0;
 use rknpu::Card;
 
 #[repr(C)]
@@ -328,7 +323,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             fs.clone(),
             NodeType::CharacterDevice,
             DeviceId::new(10, 1024),
-            Arc::new(Card1),
+            Arc::new(Card0),
         ),
     );
 
