@@ -1,10 +1,12 @@
 use core::ptr::NonNull;
 
 use axhal::mem::{PhysAddr, pa, phys_to_virt};
+use memory_addr::PhysAddrRange;
 use rk3588_rs::{RknpuMemCreate, RknpuMemDestroy, RknpuMemMap};
 use rknpu_driver::{
     memory::NpuAllocator, rknpu_ioctl, types::{NpuCore, RkBoard, RkNpuIoctl}, RknpuDev
 };
+use starry_core::vfs::DeviceMmap;
 
 use crate::vfs::dev::*;
 
@@ -25,25 +27,25 @@ lazy_static! {
         let pmu_base = NonNull::new(phys_to_virt(RKNU_PMU1_BASE).as_mut_ptr()).unwrap();
         dev.initialize(pmu_base).unwrap();
 
-        // // 注册中断处理程序
-        // axplat::irq::register(NPU0_IRQ, |_| {
-        //     // 获取 RKNPU 的引用并处理中断
-        //     if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu0) {
-        //         info!("[RKNPU] IRQ handled, status=0x{:x}", status);
-        //     }
-        // });
-        // axplat::irq::register(NPU1_IRQ, |_| {
-        //     // 获取 RKNPU 的引用并处理中断
-        //     if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu1) {
-        //         info!("[RKNPU] IRQ handled, status=0x{:x}", status);
-        //     }
-        // });
-        // axplat::irq::register(NPU2_IRQ, |_| {
-        //     // 获取 RKNPU 的引用并处理中断
-        //     if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu2) {
-        //         info!("[RKNPU] IRQ handled, status=0x{:x}", status);
-        //     }
-        // });
+        // 注册中断处理程序
+        axplat::irq::register(NPU0_IRQ, |_| {
+            // 获取 RKNPU 的引用并处理中断
+            if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu0) {
+                info!("[RKNPU] IRQ handled, status=0x{:x}", status);
+            }
+        });
+        axplat::irq::register(NPU1_IRQ, |_| {
+            // 获取 RKNPU 的引用并处理中断
+            if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu1) {
+                info!("[RKNPU] IRQ handled, status=0x{:x}", status);
+            }
+        });
+        axplat::irq::register(NPU2_IRQ, |_| {
+            // 获取 RKNPU 的引用并处理中断
+            if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu2) {
+                info!("[RKNPU] IRQ handled, status=0x{:x}", status);
+            }
+        });
 
         info!("[RKNPU] Initialized and IRQ {} registered", NPU0_IRQ);
 
@@ -80,11 +82,19 @@ impl DeviceOps for Card0 {
     }
 
     fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
-        info!("card0 ioctl => cmd: {:#x}, arg: {:#x}", cmd, arg);
+        let rknpu_cmd = RkNpuIoctl::from_cmd(cmd);
+        if rknpu_cmd.is_none() {
+            return Err(AxError::InvalidInput);
+        }
+        info!("card0 ioctl => cmd: {:?}, arg: {:#x}", rknpu_cmd, arg);
 
-        match RkNpuIoctl::from_cmd(cmd) {
+        match rknpu_cmd {
             Some(RkNpuIoctl::RknpuMemCreate) => {
                 let mem_create = unsafe { &mut *(arg as *mut RknpuMemCreate) };
+                info!(
+                    "[RKNPU] MemCreate ioctl: size={} bytes",
+                    mem_create.size
+                );
                 if let Ok((handle, dma_addr, obj_addr)) =
                     NPU_ALLOCATOR.create_handle(mem_create.size as usize)
                 {
@@ -92,14 +102,28 @@ impl DeviceOps for Card0 {
                     mem_create.dma_addr = dma_addr;
                     mem_create.obj_addr = obj_addr;
 
+                    info!(
+                        "[RKNPU] MemCreate result: handle={}, dma_addr=0x{:x}, obj_addr=0x{:x}",
+                        handle, dma_addr, obj_addr
+                    );
+
                     return Ok(0);
                 }
                 return Err(AxError::InvalidInput);
             }
             Some(RkNpuIoctl::RknpuMemMap) => {
                 let mem_map = unsafe { &mut *(arg as *mut RknpuMemMap) };
+                info!(
+                    "[RKNPU] MemMap ioctl: handle={}",
+                    mem_map.handle
+                );
                 if let Ok((offset, _size)) = NPU_ALLOCATOR.get_handle(mem_map.handle) {
                     mem_map.offset = offset;
+
+                    info!(
+                        "[RKNPU] MemMap result: handle={}, offset=0x{:x}",
+                        mem_map.handle, mem_map.offset
+                    );
 
                     return Ok(0);
                 }
@@ -107,18 +131,43 @@ impl DeviceOps for Card0 {
             }
             Some(RkNpuIoctl::RknpuMemDestroy) => {
                 let mem_destroy = unsafe { &mut *(arg as *mut RknpuMemDestroy) };
+                info!(
+                    "[RKNPU] MemDestroy ioctl: handle={}",
+                    mem_destroy.handle
+                );
                 if NPU_ALLOCATOR.destroy_handle(mem_destroy.handle) {
                     return Ok(0);
                 }
                 return Err(AxError::InvalidInput);
             }
-            Some(_) => if let Ok(()) = rknpu_ioctl(&RKNPU, cmd, arg) {
+            Some(_) => if let Ok(()) = rknpu_ioctl(&RKNPU, rknpu_cmd, arg) {
                 return Ok(0);
             } else {
                 error!("[RKNPU] ioctl failed: cmd={:#x}, arg={:#x}", cmd, arg);
                 return Err(AxError::InvalidInput);
             }
             None => return Err(AxError::InvalidInput),
+        }
+    }
+
+    fn mmap(&self) -> DeviceMmap {
+        // 返回整个内存池的物理地址范围
+        // 用户的 mmap offset 会被加到这个基地址上
+        match (NPU_ALLOCATOR.get_bus_addr(), NPU_ALLOCATOR.get_pool_size()) {
+            (Ok(bus_addr), Ok(size)) => {
+                info!(
+                    "[RKNPU] mmap: returning bus address range bus_addr=0x{:x}, size=0x{:x}",
+                    bus_addr, size
+                );
+                DeviceMmap::Physical(PhysAddrRange::from_start_size(
+                    PhysAddr::from(bus_addr as usize),
+                    size,
+                ))
+            }
+            _ => {
+                warn!("[RKNPU] mmap: memory pool not initialized");
+                DeviceMmap::None
+            }
         }
     }
 }

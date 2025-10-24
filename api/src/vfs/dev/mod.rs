@@ -145,6 +145,7 @@ impl DeviceOps for CpuDmaLatency {
 mod rknpu;
 use rknpu::card0::Card0;
 use rknpu::Card;
+// use rknpu::card1::Card1;
 
 #[repr(C)]
 pub struct RknpuAction {

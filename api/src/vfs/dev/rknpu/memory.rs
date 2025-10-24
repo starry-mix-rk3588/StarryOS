@@ -118,10 +118,7 @@ impl MemoryPool {
             .get(&handle)
             .ok_or(RkNpuError::InvalidParameter)?;
 
-        // 返回总线地址 (bus_addr) 用于 mmap offset
-        let bus_base = self.dma_info.bus_addr.as_u64();
-        let bus_addr = bus_base + mem.offset as u64;
-        Ok((bus_addr, mem.size))
+        Ok((mem.offset as u64, mem.size))
     }
 
     fn user_to_kernel_addr(&self, user_addr: usize) -> RkNpuResult<VirtAddr> {
@@ -212,5 +209,21 @@ impl NpuAllocator for NpuDmaAllocator {
         let pool = pool.as_ref().ok_or(RkNpuError::NotSupported)?;
 
         pool.user_to_kernel_addr(user_addr)
+    }
+}
+
+impl NpuDmaAllocator {
+    /// 获取内存池的总线地址(用于 mmap)
+    pub fn get_bus_addr(&self) -> RkNpuResult<u64> {
+        let pool = self.pool.lock();
+        let pool = pool.as_ref().ok_or(RkNpuError::NotSupported)?;
+        Ok(pool.dma_info.bus_addr.as_u64())
+    }
+
+    /// 获取内存池的大小
+    pub fn get_pool_size(&self) -> RkNpuResult<usize> {
+        let pool = self.pool.lock();
+        let pool = pool.as_ref().ok_or(RkNpuError::NotSupported)?;
+        Ok(pool.pool_size)
     }
 }
