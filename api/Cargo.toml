@@ -31,6 +31,7 @@ axpoll.workspace = true
 axsync.workspace = true
 axtask.workspace = true
 axdma.workspace = true
+axplat.workspace = true
 
 starry-core.workspace = true
 

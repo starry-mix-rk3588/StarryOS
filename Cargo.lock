@@ -2216,6 +2216,7 @@ name = "rknpu-driver"
 version = "0.1.0"
 dependencies = [
  "log",
+ "memory_addr",
  "rk3588-rs",
  "rockchip-pm",
  "tock-registers 0.10.0",
@@ -2452,6 +2453,7 @@ dependencies = [
  "axlog",
  "axmm",
  "axnet",
+ "axplat",
  "axpoll",
  "axsync",
  "axtask",

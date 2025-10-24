@@ -60,6 +60,10 @@ opi5p:
 upload: 
 	bash $(TOOL_PATH)/upload_flash.sh $(TARGET_DIR).img
 
+tftp: opi5p
+	@echo "Copy $(PROJECT_NAME) to TFTP directory..."
+	cp StarryOS_aarch64-opi5p.uimg /data/docker/tftpboot/data/kernel.uimg
+
 flash:
 	sudo bash $(TOOL_PATH)/make_flash.sh
 
