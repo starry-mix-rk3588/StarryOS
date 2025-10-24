@@ -4,7 +4,10 @@ use axhal::mem::{PhysAddr, pa, phys_to_virt};
 use memory_addr::PhysAddrRange;
 use rk3588_rs::{RknpuMemCreate, RknpuMemDestroy, RknpuMemMap};
 use rknpu_driver::{
-    memory::NpuAllocator, rknpu_ioctl, types::{NpuCore, RkBoard, RkNpuIoctl}, RknpuDev
+    RknpuDev,
+    memory::NpuAllocator,
+    rknpu_ioctl,
+    types::{NpuCore, RkBoard, RkNpuIoctl},
 };
 use starry_core::vfs::DeviceMmap;
 
@@ -91,10 +94,7 @@ impl DeviceOps for Card0 {
         match rknpu_cmd {
             Some(RkNpuIoctl::RknpuMemCreate) => {
                 let mem_create = unsafe { &mut *(arg as *mut RknpuMemCreate) };
-                info!(
-                    "[RKNPU] MemCreate ioctl: size={} bytes",
-                    mem_create.size
-                );
+                info!("[RKNPU] MemCreate ioctl: size={} bytes", mem_create.size);
                 if let Ok((handle, dma_addr, obj_addr)) =
                     NPU_ALLOCATOR.create_handle(mem_create.size as usize)
                 {
@@ -113,10 +113,7 @@ impl DeviceOps for Card0 {
             }
             Some(RkNpuIoctl::RknpuMemMap) => {
                 let mem_map = unsafe { &mut *(arg as *mut RknpuMemMap) };
-                info!(
-                    "[RKNPU] MemMap ioctl: handle={}",
-                    mem_map.handle
-                );
+                info!("[RKNPU] MemMap ioctl: handle={}", mem_map.handle);
                 if let Ok((offset, _size)) = NPU_ALLOCATOR.get_handle(mem_map.handle) {
                     mem_map.offset = offset;
 
@@ -131,20 +128,21 @@ impl DeviceOps for Card0 {
             }
             Some(RkNpuIoctl::RknpuMemDestroy) => {
                 let mem_destroy = unsafe { &mut *(arg as *mut RknpuMemDestroy) };
-                info!(
-                    "[RKNPU] MemDestroy ioctl: handle={}",
-                    mem_destroy.handle
-                );
+                info!("[RKNPU] MemDestroy ioctl: handle={}", mem_destroy.handle);
                 if NPU_ALLOCATOR.destroy_handle(mem_destroy.handle) {
                     return Ok(0);
                 }
                 return Err(AxError::InvalidInput);
             }
-            Some(_) => if let Ok(()) = rknpu_ioctl(&RKNPU, rknpu_cmd, arg) {
-                return Ok(0);
-            } else {
-                error!("[RKNPU] ioctl failed: cmd={:#x}, arg={:#x}", cmd, arg);
-                return Err(AxError::InvalidInput);
+            Some(_) => {
+                if let Ok(()) = rknpu_ioctl(&RKNPU, rknpu_cmd, arg, |pa| {
+                    NPU_ALLOCATOR.user_to_kernel_addr(pa.as_usize()).unwrap()
+                }) {
+                    return Ok(0);
+                } else {
+                    error!("[RKNPU] ioctl failed: cmd={:#x}, arg={:#x}", cmd, arg);
+                    return Err(AxError::InvalidInput);
+                }
             }
             None => return Err(AxError::InvalidInput),
         }
