@@ -10,6 +10,7 @@ use rknpu_driver::{
     types::{NpuCore, RkBoard, RkNpuIoctl},
 };
 use starry_core::vfs::DeviceMmap;
+use starry_vm::VmMutPtr;
 
 use crate::vfs::dev::*;
 
@@ -98,9 +99,15 @@ impl DeviceOps for Card0 {
                 if let Ok((handle, dma_addr, obj_addr)) =
                     NPU_ALLOCATOR.create_handle(mem_create.size as usize)
                 {
-                    mem_create.handle = handle;
-                    mem_create.dma_addr = dma_addr;
-                    mem_create.obj_addr = obj_addr;
+                    let k_mem_create = RknpuMemCreate {
+                        handle,
+                        dma_addr,
+                        obj_addr,
+                        size: mem_create.size,
+                        flags: mem_create.flags,
+                        sram_size: mem_create.sram_size,
+                    };
+                    let _ = (arg as *mut RknpuMemCreate).vm_write(k_mem_create);
 
                     info!(
                         "[RKNPU] MemCreate result: handle={}, dma_addr=0x{:x}, obj_addr=0x{:x}",

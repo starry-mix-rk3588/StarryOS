@@ -71,6 +71,7 @@ test_app: ./tools/v.c
 	aarch64-linux-musl-gcc ./tools/v.c -o ./tools/a.out --static
 	sudo mount -o loop ./arceos/disk.img ./arceos/mnt
 	sudo cp ./tools/a.out ./arceos/mnt/lib/
+	sudo cp ./crates/rknpu2-rslab/target/aarch64-unknown-linux-musl/release/rknpu2 ./arceos/mnt/lib
 	sudo umount ./arceos/mnt
 
 .PHONY: build run justrun debug disasm clean
