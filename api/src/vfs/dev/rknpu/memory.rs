@@ -89,20 +89,6 @@ impl MemoryPool {
         let dma_addr = bus_base + offset as u64;
         let obj_addr = dma_addr; // obj_addr 和 dma_addr 相同
 
-        if handle == 2 {
-            let ptr = (dma_addr + 0xffff_0000_0000_0000) as *mut u32;
-
-            unsafe {
-                core::ptr::write_volatile(ptr, 0xa);
-                core::ptr::write_volatile(ptr.add(1), 0x9);
-                core::ptr::write_volatile(ptr.add(2), 0x8);
-                core::ptr::write_volatile(ptr.add(3), 0x7);
-                core::ptr::write_volatile(ptr.add(4), 0x6);
-                core::ptr::write_volatile(ptr.add(5), 0x5);
-                core::ptr::write_volatile(ptr.add(6), 0x4);
-            }
-        }
-
         debug!(
             "[NPU DMA] Created handle={}, offset=0x{:x}, size={}, bus_addr=0x{:x}",
             handle, offset, size, dma_addr
@@ -137,22 +123,22 @@ impl MemoryPool {
 
     fn user_to_kernel_addr(&self, user_addr: usize) -> RkNpuResult<VirtAddr> {
         // user_addr 是总线地址 (bus_addr),需要转换为虚拟地址
-        // let bus_base = self.dma_info.bus_addr.as_u64() as usize;
-        // let bus_end = bus_base + self.pool_size;
+        let bus_base = self.dma_info.bus_addr.as_u64() as usize;
+        let bus_end = bus_base + self.pool_size;
 
-        // if user_addr < bus_base || user_addr >= bus_end {
-        //     error!(
-        //         "[NPU DMA] Invalid address conversion: user_addr=0x{:x}, bus_range=[0x{:x}, \
-        //          0x{:x})",
-        //         user_addr, bus_base, bus_end
-        //     );
-        //     return Err(RkNpuError::InvalidParameter);
-        // }
+        if user_addr < bus_base || user_addr >= bus_end {
+            error!(
+                "[NPU DMA] Invalid address conversion: user_addr=0x{:x}, bus_range=[0x{:x}, \
+                 0x{:x})",
+                user_addr, bus_base, bus_end
+            );
+            return Err(RkNpuError::InvalidParameter);
+        }
 
-        // let offset = user_addr - bus_base;
-        // let virt_addr = self.dma_info.cpu_addr.as_ptr() as usize + offset;
+        let offset = user_addr - bus_base;
+        let virt_addr = self.dma_info.cpu_addr.as_ptr() as usize + offset;
 
-        Ok(VirtAddr::from(user_addr))
+        Ok(VirtAddr::from(virt_addr))
     }
 }
 
