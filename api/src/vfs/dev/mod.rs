@@ -23,6 +23,8 @@ use rand::{RngCore, SeedableRng, rngs::SmallRng};
 use starry_core::vfs::{Device, DeviceOps, DirMaker, DirMapping, SimpleDir, SimpleFs};
 
 mod gpio;
+mod pwm_hw_dev;
+mod pwm_hw;
 
 const RANDOM_SEED: &[u8; 32] = b"0123456789abcdef0123456789abcdef";
 
@@ -148,7 +150,7 @@ mod rknpu;
 use rknpu::card0::Card0;
 // use rknpu::Card;
 
-use crate::vfs::dev::gpio::GpioDevice;
+use crate::vfs::dev::{gpio::GpioDevice, pwm_hw_dev::HwPwmDevice};
 // use rknpu::card1::Card1;
 
 #[repr(C)]
@@ -299,6 +301,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             DeviceId::new(10, 8),
             Arc::new(GpioDevice::new()),
         ),
+    );
+
+    // PWM
+    root.add(
+        "pwm",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(10, 9),
+            Arc::new(HwPwmDevice::new()),
+        )
     );
 
     // Loop devices
