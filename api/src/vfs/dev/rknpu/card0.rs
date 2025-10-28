@@ -1,5 +1,3 @@
-use core::ptr::NonNull;
-
 use axhal::mem::{PhysAddr, pa, phys_to_virt};
 use memory_addr::PhysAddrRange;
 use rk3588_rs::{RknpuMemCreate, RknpuMemDestroy, RknpuMemMap};
@@ -15,7 +13,8 @@ use starry_vm::VmMutPtr;
 use crate::vfs::dev::*;
 
 const RKNPU_CORE_BASE: PhysAddr = pa!(0xFDAB0000);
-const RKNU_PMU1_BASE: PhysAddr = pa!(0xFD8D8000);
+const RKNPU_PMU1_BASE: PhysAddr = pa!(0xFD8D8000);
+const RKNPU_CRU_BASE: PhysAddr = pa!(0xFD7C0000);
 
 const NPU0_IRQ: usize = 142;
 const NPU1_IRQ: usize = 143;
@@ -27,27 +26,31 @@ use super::memory::NpuDmaAllocator;
 
 lazy_static! {
     static ref RKNPU: RknpuDev = {
-        let mut dev = RknpuDev::new(phys_to_virt(RKNPU_CORE_BASE).as_usize(), RkBoard::Rk3588);
-        let pmu_base = NonNull::new(phys_to_virt(RKNU_PMU1_BASE).as_mut_ptr()).unwrap();
-        dev.initialize(pmu_base).unwrap();
+        let mut dev = RknpuDev::new(
+            phys_to_virt(RKNPU_CORE_BASE).as_usize(), 
+            phys_to_virt(RKNPU_CRU_BASE).as_usize(), 
+            phys_to_virt(RKNPU_PMU1_BASE).as_usize(), 
+            RkBoard::Rk3588
+        );
+        dev.initialize().unwrap();
 
         // 注册中断处理程序
         axplat::irq::register(NPU0_IRQ, |_| {
             // 获取 RKNPU 的引用并处理中断
             if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu0) {
-                info!("[RKNPU] IRQ handled, status=0x{:x}", status);
+                debug!("[RKNPU] IRQ handled, status=0x{:x}", status);
             }
         });
         axplat::irq::register(NPU1_IRQ, |_| {
             // 获取 RKNPU 的引用并处理中断
             if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu1) {
-                info!("[RKNPU] IRQ handled, status=0x{:x}", status);
+                debug!("[RKNPU] IRQ handled, status=0x{:x}", status);
             }
         });
         axplat::irq::register(NPU2_IRQ, |_| {
             // 获取 RKNPU 的引用并处理中断
             if let Ok(status) = RKNPU.handle_irq(NpuCore::Npu2) {
-                info!("[RKNPU] IRQ handled, status=0x{:x}", status);
+                debug!("[RKNPU] IRQ handled, status=0x{:x}", status);
             }
         });
 
@@ -68,12 +71,12 @@ pub struct Card0;
 
 impl DeviceOps for Card0 {
     fn read_at(&self, _buf: &mut [u8], _offset: u64) -> VfsResult<usize> {
-        info!("card read = >");
+        debug!("card read = >");
         Err(AxError::InvalidInput)
     }
 
     fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
-        info!("card write = >");
+        debug!("card write = >");
         Ok(buf.len())
     }
 
@@ -90,12 +93,12 @@ impl DeviceOps for Card0 {
         if rknpu_cmd.is_none() {
             return Err(AxError::InvalidInput);
         }
-        info!("card0 ioctl => cmd: {:?}, arg: {:#x}", rknpu_cmd, arg);
+        debug!("card0 ioctl => cmd: {:?}, arg: {:#x}", rknpu_cmd, arg);
 
         match rknpu_cmd {
             Some(RkNpuIoctl::RknpuMemCreate) => {
                 let mem_create = unsafe { &mut *(arg as *mut RknpuMemCreate) };
-                info!("[RKNPU] MemCreate ioctl: size={} bytes", mem_create.size);
+                debug!("[RKNPU] MemCreate ioctl: size={} bytes", mem_create.size);
                 if let Ok((handle, dma_addr, obj_addr)) =
                     NPU_ALLOCATOR.create_handle(mem_create.size as usize)
                 {
@@ -109,7 +112,7 @@ impl DeviceOps for Card0 {
                     };
                     let _ = (arg as *mut RknpuMemCreate).vm_write(k_mem_create);
 
-                    info!(
+                    debug!(
                         "[RKNPU] MemCreate result: handle={}, dma_addr=0x{:x}, obj_addr=0x{:x}",
                         handle, dma_addr, obj_addr
                     );
@@ -120,11 +123,11 @@ impl DeviceOps for Card0 {
             }
             Some(RkNpuIoctl::RknpuMemMap) => {
                 let mem_map = unsafe { &mut *(arg as *mut RknpuMemMap) };
-                info!("[RKNPU] MemMap ioctl: handle={}", mem_map.handle);
+                debug!("[RKNPU] MemMap ioctl: handle={}", mem_map.handle);
                 if let Ok((offset, _size)) = NPU_ALLOCATOR.get_handle(mem_map.handle) {
                     mem_map.offset = offset;
 
-                    info!(
+                    debug!(
                         "[RKNPU] MemMap result: handle={}, offset=0x{:x}",
                         mem_map.handle, mem_map.offset
                     );
@@ -135,7 +138,7 @@ impl DeviceOps for Card0 {
             }
             Some(RkNpuIoctl::RknpuMemDestroy) => {
                 let mem_destroy = unsafe { &mut *(arg as *mut RknpuMemDestroy) };
-                info!("[RKNPU] MemDestroy ioctl: handle={}", mem_destroy.handle);
+                debug!("[RKNPU] MemDestroy ioctl: handle={}", mem_destroy.handle);
                 if NPU_ALLOCATOR.destroy_handle(mem_destroy.handle) {
                     return Ok(0);
                 }
@@ -160,7 +163,7 @@ impl DeviceOps for Card0 {
         // 用户的 mmap offset 会被加到这个基地址上
         match (NPU_ALLOCATOR.get_bus_addr(), NPU_ALLOCATOR.get_pool_size()) {
             (Ok(bus_addr), Ok(size)) => {
-                info!(
+                debug!(
                     "[RKNPU] mmap: returning bus address range bus_addr=0x{:x}, size=0x{:x}",
                     bus_addr, size
                 );

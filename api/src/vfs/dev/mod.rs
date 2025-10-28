@@ -22,6 +22,8 @@ pub use log::bind_dev_log;
 use rand::{RngCore, SeedableRng, rngs::SmallRng};
 use starry_core::vfs::{Device, DeviceOps, DirMaker, DirMapping, SimpleDir, SimpleFs};
 
+mod gpio;
+
 const RANDOM_SEED: &[u8; 32] = b"0123456789abcdef0123456789abcdef";
 
 pub(crate) fn new_devfs() -> Filesystem {
@@ -144,7 +146,9 @@ impl DeviceOps for CpuDmaLatency {
 // mod drm;
 mod rknpu;
 use rknpu::card0::Card0;
-use rknpu::Card;
+// use rknpu::Card;
+
+use crate::vfs::dev::gpio::GpioDevice;
 // use rknpu::card1::Card1;
 
 #[repr(C)]
@@ -286,6 +290,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
         SimpleDir::new_maker(fs.clone(), Arc::new(DirMapping::new())),
     );
 
+    // GPIO
+    root.add(
+        "gpio",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(10, 8),
+            Arc::new(GpioDevice::new()),
+        ),
+    );
+
     // Loop devices
     for i in 0..16 {
         let dev_id = DeviceId::new(7, 0);
@@ -308,15 +323,15 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     );
 
     let mut dri = DirMapping::new();
-    dri.add(
-        "card0",
-        Device::new(
-            fs.clone(),
-            NodeType::CharacterDevice,
-            DeviceId::new(10, 1024),
-            Arc::new(Card),
-        ),
-    );
+    // dri.add(
+    //     "card0",
+    //     Device::new(
+    //         fs.clone(),
+    //         NodeType::CharacterDevice,
+    //         DeviceId::new(10, 1024),
+    //         Arc::new(Card),
+    //     ),
+    // );
 
     dri.add(
         "card1",

@@ -20,3 +20,6 @@
 [submodule "crates/rknpu-driver"]
 	path = crates/rknpu-driver
 	url = https://github.com/starry-mix-rk3588/rknpu-driver.git
+[submodule "crates/rkgpio"]
+	path = crates/rkgpio
+	url = https://github.com/starry-mix-rk3588/rkgpio.git

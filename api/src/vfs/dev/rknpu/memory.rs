@@ -1,4 +1,5 @@
 use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 use core::{
     alloc::Layout,
     sync::atomic::{AtomicU32, Ordering},
@@ -13,8 +14,8 @@ use rknpu_driver::{
     types::{RkNpuError, RkNpuResult},
 };
 
-/// NPU 内存池大小：32MB
-const NPU_MEMORY_POOL_SIZE: usize = 32 * 1024 * 1024;
+/// NPU 内存池大小：256MB
+const NPU_MEMORY_POOL_SIZE: usize = 256 * 1024 * 1024;
 
 /// 内存句柄信息
 struct MemHandle {
@@ -26,7 +27,7 @@ struct MemHandle {
 struct MemoryPool {
     dma_info: DMAInfo,
     pool_size: usize,
-    next_offset: usize,
+    free_regions: BTreeMap<usize, usize>, // offset -> size 的空闲区间映射
     handles: BTreeMap<u32, MemHandle>,
     next_handle: AtomicU32,
 }
@@ -61,7 +62,11 @@ impl MemoryPool {
         Ok(Self {
             dma_info,
             pool_size: NPU_MEMORY_POOL_SIZE,
-            next_offset: 0,
+            free_regions: {
+                let mut map = BTreeMap::new();
+                map.insert(0, NPU_MEMORY_POOL_SIZE); // 整个池子初始都是空闲的
+                map
+            },
             handles: BTreeMap::new(),
             next_handle: AtomicU32::new(1),
         })
@@ -71,40 +76,108 @@ impl MemoryPool {
         let handle = self.next_handle.fetch_add(1, Ordering::SeqCst);
         let aligned_size = align_up_4k(size);
 
-        if self.next_offset + aligned_size > self.pool_size {
-            error!(
-                "[NPU DMA] Out of memory: requested={}, available={}",
-                aligned_size,
-                self.pool_size - self.next_offset
+        // 查找第一个足够大的空闲区间（首次适应算法）
+        let allocation = self
+            .free_regions
+            .iter()
+            .find(|(_, region_size)| **region_size >= aligned_size)
+            .map(|(offset, region_size)| (*offset, *region_size));
+
+        if let Some((offset, region_size)) = allocation {
+            // 从空闲区间映射中移除
+            self.free_regions.remove(&offset);
+
+            // 如果有剩余空间，重新插入剩余部分
+            let remaining = region_size - aligned_size;
+            if remaining > 0 {
+                self.free_regions.insert(offset + aligned_size, remaining);
+            }
+
+            // 使用总线地址 (bus_addr) 而不是物理地址
+            // NPU 硬件通过总线访问内存,需要使用 bus_addr
+            let bus_base = self.dma_info.bus_addr.as_u64();
+            let dma_addr = bus_base + offset as u64;
+            let obj_addr = dma_addr; // obj_addr 和 dma_addr 相同
+
+            debug!(
+                "[NPU DMA] Created handle={}, offset=0x{:x}, size={}, bus_addr=0x{:x}, free_regions={}",
+                handle, offset, size, dma_addr, self.free_regions.len()
             );
-            return Err(RkNpuError::OutOfMemory);
+
+            self.handles.insert(handle, MemHandle { offset, size: aligned_size });
+
+            Ok((handle, obj_addr, dma_addr))
+        } else {
+            error!(
+                "[NPU DMA] Out of memory: requested={}, available fragments: {:?}",
+                aligned_size,
+                self.free_regions.values().collect::<Vec<_>>()
+            );
+            Err(RkNpuError::OutOfMemory)
         }
-
-        let offset = self.next_offset;
-        self.next_offset += aligned_size;
-
-        // 使用总线地址 (bus_addr) 而不是物理地址
-        // NPU 硬件通过总线访问内存,需要使用 bus_addr
-        let bus_base = self.dma_info.bus_addr.as_u64();
-        let dma_addr = bus_base + offset as u64;
-        let obj_addr = dma_addr; // obj_addr 和 dma_addr 相同
-
-        debug!(
-            "[NPU DMA] Created handle={}, offset=0x{:x}, size={}, bus_addr=0x{:x}",
-            handle, offset, size, dma_addr
-        );
-
-        self.handles.insert(handle, MemHandle { offset, size });
-
-        Ok((handle, obj_addr, dma_addr))
     }
 
     fn destroy_handle(&mut self, handle: u32) -> bool {
         if let Some(mem) = self.handles.remove(&handle) {
+            let offset = mem.offset;
+            let size = mem.size;
+
             debug!(
-                "[NPU DMA] Destroyed handle={}, offset=0x{:x}, size={}",
-                handle, mem.offset, mem.size
+                "[NPU DMA] Destroying handle={}, offset=0x{:x}, size={}",
+                handle, offset, size
             );
+
+            // 尝试与前面和后面的空闲区间合并
+            let mut merged_offset = offset;
+            let mut merged_size = size;
+
+            // 查找前面相邻的空闲区间
+            if let Some((prev_offset, prev_size)) = self
+                .free_regions
+                .range(..offset)
+                .next_back()
+                .map(|(k, v)| (*k, *v))
+            {
+                if prev_offset + prev_size == offset {
+                    // 可以与前面的区间合并
+                    self.free_regions.remove(&prev_offset);
+                    merged_offset = prev_offset;
+                    merged_size += prev_size;
+                    debug!(
+                        "[NPU DMA] Merged with previous region: offset=0x{:x}, size={}",
+                        prev_offset, prev_size
+                    );
+                }
+            }
+
+            // 查找后面相邻的空闲区间
+            if let Some((next_offset, next_size)) = self
+                .free_regions
+                .range((offset + size)..)
+                .next()
+                .map(|(k, v)| (*k, *v))
+            {
+                if merged_offset + merged_size == next_offset {
+                    // 可以与后面的区间合并
+                    self.free_regions.remove(&next_offset);
+                    merged_size += next_size;
+                    debug!(
+                        "[NPU DMA] Merged with next region: offset=0x{:x}, size={}",
+                        next_offset, next_size
+                    );
+                }
+            }
+
+            // 插入合并后的空闲区间
+            self.free_regions.insert(merged_offset, merged_size);
+
+            debug!(
+                "[NPU DMA] Final free region: offset=0x{:x}, size={}, total free regions: {}",
+                merged_offset,
+                merged_size,
+                self.free_regions.len()
+            );
+
             true
         } else {
             warn!("[NPU DMA] Attempted to destroy invalid handle={}", handle);

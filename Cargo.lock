@@ -2212,6 +2212,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rkgpio"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "tock-registers 0.8.1",
+]
+
+[[package]]
 name = "rknpu-driver"
 version = "0.1.0"
 dependencies = [
@@ -2479,6 +2487,7 @@ dependencies = [
  "ringbuf",
  "riscv",
  "rk3588-rs",
+ "rkgpio",
  "rknpu-driver",
  "rockchip-pm",
  "scope-local",

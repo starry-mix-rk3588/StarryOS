@@ -1,7 +1,7 @@
-// pub mod card1;
+pub mod card1;
 pub mod card0;
 pub mod memory;
-// pub(crate) mod device;
+pub(crate) mod device;
 
 use crate::vfs::{
     DeviceOps,
