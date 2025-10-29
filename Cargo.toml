@@ -13,6 +13,7 @@ authors = [
 homepage = "https://github.com/arceos-org/arceos"
 repository = "https://github.com/arceos-org/starry-next"
 license = "GPL-3.0-or-later OR Apache-2.0 OR MulanPSL-2.0"
+categories = ["os", "no-std", "hardware-support"]
 
 [workspace.dependencies]
 axfeat = { path = "arceos/api/axfeat", features = [
@@ -23,6 +24,7 @@ axfeat = { path = "arceos/api/axfeat", features = [
     # "irq",
     "multitask",
     "net",
+    # "driver-gmac",
     "page-alloc-4g",
     "rtc",
     # "sched-fifo",
@@ -73,6 +75,7 @@ starry-process = "0.2"
 starry-signal = "0.2"
 starry-vm = "0.1"
 axplat = "0.2.0"
+axdriver_base = { git = "https://github.com/starry-mix-rk3588/axdriver_crates.git", rev = "73e7457" }
 
 starry-core = { path = "./core" }
 starry-api = { path = "./api" }
@@ -107,7 +110,7 @@ qemu = [
 ]
 vf2 = ["dep:axplat-riscv64-visionfive2", "axfeat/driver-sdmmc-gpt"]
 2k1000la = ["dep:axplat-loongarch64-2k1000la", "axfeat/driver-ahci-gpt"]
-opi5p = ["dep:axplat-aarch64-opi5p", "axfeat/driver-sdmmc-gpt"]
+opi5p = ["dep:axplat-aarch64-opi5p", "axfeat/driver-sdmmc-gpt", "axfeat/driver-rtl8169"]
 
 # Stubs
 pci = ["axfeat/bus-pci"]

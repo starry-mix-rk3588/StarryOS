@@ -23,3 +23,6 @@
 [submodule "crates/rkgpio"]
 	path = crates/rkgpio
 	url = https://github.com/starry-mix-rk3588/rkgpio.git
+[submodule "crates/axdriver_crates"]
+	path = crates/axdriver_crates
+	url = https://github.com/starry-mix-rk3588/axdriver_crates.git

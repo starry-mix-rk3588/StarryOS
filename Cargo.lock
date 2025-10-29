@@ -334,7 +334,7 @@ dependencies = [
  "axdriver_block",
  "axdriver_display",
  "axdriver_input",
- "axdriver_net",
+ "axdriver_net 0.1.0",
  "axdriver_pci",
  "axdriver_virtio",
  "axhal",
@@ -347,12 +347,12 @@ dependencies = [
 [[package]]
 name = "axdriver_base"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 
 [[package]]
 name = "axdriver_block"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 dependencies = [
  "axdriver_base",
  "gpt_disk_io",
@@ -363,7 +363,7 @@ dependencies = [
 [[package]]
 name = "axdriver_display"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 dependencies = [
  "axdriver_base",
 ]
@@ -371,7 +371,7 @@ dependencies = [
 [[package]]
 name = "axdriver_input"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 dependencies = [
  "axdriver_base",
  "strum",
@@ -379,8 +379,18 @@ dependencies = [
 
 [[package]]
 name = "axdriver_net"
+version = "0.1.0"
+dependencies = [
+ "axdriver_base",
+ "crate_interface",
+ "log",
+ "spin 0.9.8",
+]
+
+[[package]]
+name = "axdriver_net"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 dependencies = [
  "axdriver_base",
  "log",
@@ -390,7 +400,7 @@ dependencies = [
 [[package]]
 name = "axdriver_pci"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 dependencies = [
  "virtio-drivers",
 ]
@@ -398,13 +408,13 @@ dependencies = [
 [[package]]
 name = "axdriver_virtio"
 version = "0.1.2"
-source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=840f811#840f8110a9c85c9458e8c51f600bbb5a92548e3b"
+source = "git+https://github.com/starry-mix-rk3588/axdriver_crates.git?rev=73e7457#73e7457e4659dcb9cf7dac5a1f5e4991b4080221"
 dependencies = [
  "axdriver_base",
  "axdriver_block",
  "axdriver_display",
  "axdriver_input",
- "axdriver_net",
+ "axdriver_net 0.1.2",
  "log",
  "virtio-drivers",
 ]
