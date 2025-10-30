@@ -617,7 +617,6 @@ dependencies = [
  "axcpu",
  "axplat",
  "axplat-aarch64-peripherals 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dw_apb_uart",
  "int_ratio",
  "kspin",
  "log",
@@ -1270,15 +1269,6 @@ dependencies = [
  "cfg-if",
  "spin 0.10.0",
  "thiserror",
-]
-
-[[package]]
-name = "dw_apb_uart"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93d496c8faa9dc676ebfa225432e1e3b57645c9268ead889286546f6d39356d"
-dependencies = [
- "tock-registers 0.8.1",
 ]
 
 [[package]]
