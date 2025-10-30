@@ -25,6 +25,7 @@ use starry_core::vfs::{Device, DeviceOps, DirMaker, DirMapping, SimpleDir, Simpl
 mod gpio;
 mod pwm_hw_dev;
 mod pwm_hw;
+mod xmodem;
 
 const RANDOM_SEED: &[u8; 32] = b"0123456789abcdef0123456789abcdef";
 
@@ -150,7 +151,7 @@ mod rknpu;
 use rknpu::card0::Card0;
 // use rknpu::Card;
 
-use crate::vfs::dev::{gpio::GpioDevice, pwm_hw_dev::HwPwmDevice};
+use crate::vfs::dev::{gpio::GpioDevice, pwm_hw_dev::HwPwmDevice, xmodem::XmodemReceive};
 // use rknpu::card1::Card1;
 
 #[repr(C)]
@@ -312,6 +313,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             DeviceId::new(10, 9),
             Arc::new(HwPwmDevice::new()),
         )
+    );
+
+    // XMODEM receiver device
+    root.add(
+        "xmodem",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(250, 0),
+            Arc::new(XmodemReceive),
+        ),
     );
 
     // Loop devices

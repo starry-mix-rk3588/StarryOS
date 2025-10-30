@@ -13,3 +13,4 @@
 /mnt
 *.uimg
 /tools/*.out
+/tools/xmodem
