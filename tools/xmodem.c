@@ -7,7 +7,7 @@
 #include <errno.h>
 
 #define BUFFER_SIZE 1024
-#define OUTPUT_FILE "received_data.bin"
+#define OUTPUT_FILE "received_data.txt"
 #define XMODEM_DEVICE "/dev/xmodem"
 
 int main() {
@@ -53,68 +53,68 @@ int main() {
     bytes_read = read(xmodem_fd, buffer, BUFFER_SIZE);
     
     if (bytes_read < 0) {
-        fprintf(stderr, "错误: 从 XMODEM 设备读取失败: %s\n", strerror(errno));
+        // fprintf(stderr, "错误: 从 XMODEM 设备读取失败: %s\n", strerror(errno));
         ret = 1;
         goto cleanup;
     } else if (bytes_read == 0) {
-        printf("XMODEM 设备返回 0 字节 (可能没有数据或传输未开始)\n");
+        // printf("XMODEM 设备返回 0 字节 (可能没有数据或传输未开始)\n");
     } else {
-        printf("✓ 从 XMODEM 接收了 %zd 字节\n", bytes_read);
+        // printf("✓ 从 XMODEM 接收了 %zd 字节\n", bytes_read);
         total_bytes = bytes_read;
 
         // 5. 将数据写入输出文件
         size_t bytes_written = fwrite(buffer, 1, bytes_read, output_file);
         if (bytes_written != (size_t)bytes_read) {
-            fprintf(stderr, "错误: 写入文件失败 (期望 %zd 字节, 实际写入 %zu 字节)\n", 
-                    bytes_read, bytes_written);
+            // fprintf(stderr, "错误: 写入文件失败 (期望 %zd 字节, 实际写入 %zu 字节)\n", 
+            //         bytes_read, bytes_written);
             ret = 1;
             goto cleanup;
         }
-        printf("✓ 已写入 %zu 字节到文件\n", bytes_written);
+        // printf("✓ 已写入 %zu 字节到文件\n", bytes_written);
 
         // 刷新文件缓冲区
         fflush(output_file);
     }
 
-    printf("----------------------------------------\n");
-    printf("接收完成!\n");
-    printf("总接收字节数: %zu\n", total_bytes);
-    printf("数据已保存到: %s\n", OUTPUT_FILE);
+    // printf("----------------------------------------\n");
+    // printf("接收完成!\n");
+    // printf("总接收字节数: %zu\n", total_bytes);
+    // printf("数据已保存到: %s\n", OUTPUT_FILE);
 
     // 如果接收到数据，显示前几个字节的十六进制内容
     if (total_bytes > 0) {
-        printf("前 16 字节内容 (十六进制):\n");
+        // printf("前 16 字节内容 (十六进制):\n");
         for (int i = 0; i < 16 && i < (int)total_bytes; i++) {
             printf("%02x ", (unsigned char)buffer[i]);
             if ((i + 1) % 8 == 0) printf(" ");
         }
-        printf("\n");
+        // printf("\n");
 
         // 尝试显示 ASCII 内容
-        printf("前 64 字节内容 (ASCII, 非打印字符显示为 '.'):\n");
+        // printf("前 64 字节内容 (ASCII, 非打印字符显示为 '.'):\n");
         for (int i = 0; i < 64 && i < (int)total_bytes; i++) {
             char c = buffer[i];
             printf("%c", (c >= 32 && c <= 126) ? c : '.');
         }
-        printf("\n");
+        // printf("\n");
     }
 
 cleanup:
     // 6. 清理资源
     if (output_file) {
         fclose(output_file);
-        printf("✓ 输出文件已关闭\n");
+        // printf("✓ 输出文件已关闭\n");
     }
     
     if (xmodem_fd >= 0) {
         close(xmodem_fd);
-        printf("✓ XMODEM 设备已关闭\n");
+        // printf("✓ XMODEM 设备已关闭\n");
     }
 
     if (ret == 0) {
-        printf("测试完成: 成功\n");
+        // printf("测试完成: 成功\n");
     } else {
-        printf("测试完成: 失败\n");
+        // printf("测试完成: 失败\n");
     }
 
     return ret;
