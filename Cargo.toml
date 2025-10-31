@@ -110,7 +110,7 @@ qemu = [
 ]
 vf2 = ["dep:axplat-riscv64-visionfive2", "axfeat/driver-sdmmc-gpt"]
 2k1000la = ["dep:axplat-loongarch64-2k1000la", "axfeat/driver-ahci-gpt"]
-opi5p = ["dep:axplat-aarch64-opi5p", "axfeat/driver-sdmmc-gpt", "axfeat/driver-rtl8169"]
+opi5p = ["dep:axplat-aarch64-opi5p", "axfeat/driver-sdmmc-gpt", "axfeat/driver-realtek"]
 
 # Stubs
 pci = ["axfeat/bus-pci"]
