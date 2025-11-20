@@ -108,6 +108,34 @@ dependencies = [
 
 [[package]]
 name = "arm-gic-driver"
+version = "0.14.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a886a953642fbf21eb5928c49a05f021fae007219ae8cb2dafbf403dfeba974a"
+dependencies = [
+ "aarch64-cpu",
+ "bitflags 2.10.0",
+ "enum_dispatch",
+ "log",
+ "rdif-intc",
+ "tock-registers 0.9.0",
+]
+
+[[package]]
+name = "arm-gic-driver"
+version = "0.15.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f251a1a74133f802b55eaf5e340107b0024457aa9b2ac3c72074501bfa8509a5"
+dependencies = [
+ "aarch64-cpu",
+ "bitflags 2.10.0",
+ "enum_dispatch",
+ "log",
+ "paste",
+ "tock-registers 0.9.0",
+]
+
+[[package]]
+name = "arm-gic-driver"
 version = "0.15.8"
 source = "git+https://github.com/Starry-OS/arm-gic-driver.git?rev=2e33925#2e33925ef33a60ee5cbc4f951fa9e198b1243926"
 dependencies = [
@@ -142,6 +170,12 @@ name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+
+[[package]]
+name = "as-any"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0f477b951e452a0b6b4a10b53ccd569042d1d01729b519e02074a9c0958a063"
 
 [[package]]
 name = "async-channel"
@@ -272,7 +306,7 @@ dependencies = [
  "axdriver_block",
  "axdriver_display",
  "axdriver_input",
- "axdriver_net",
+ "axdriver_net 0.1.0",
  "axdriver_pci",
  "axdriver_virtio",
  "axdriver_vsock",
@@ -317,6 +351,17 @@ dependencies = [
 
 [[package]]
 name = "axdriver_net"
+version = "0.1.0"
+dependencies = [
+ "axdriver_base",
+ "crate_interface",
+ "log",
+ "realtek-drivers",
+ "spin 0.9.8",
+]
+
+[[package]]
+name = "axdriver_net"
 version = "0.1.2"
 source = "git+https://github.com/Starry-OS/axdriver_crates.git?rev=a263470#a2634709194f2fd595a52b660d7d43df7c32570e"
 dependencies = [
@@ -342,7 +387,7 @@ dependencies = [
  "axdriver_block",
  "axdriver_display",
  "axdriver_input",
- "axdriver_net",
+ "axdriver_net 0.1.2",
  "axdriver_vsock",
  "log",
  "virtio-drivers",
@@ -543,12 +588,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "axplat-aarch64-opi5p"
+version = "0.1.0"
+dependencies = [
+ "aarch64-cpu",
+ "arm-gic-driver 0.14.9",
+ "axconfig-macros",
+ "axcpu",
+ "axplat",
+ "axplat-aarch64-peripherals 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dw_apb_uart",
+ "int_ratio",
+ "kspin",
+ "log",
+ "memory_addr",
+ "page_table_entry",
+]
+
+[[package]]
+name = "axplat-aarch64-peripherals"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a9a6548290a150059eb2ae015dc58d9b3d652461760327b95a490666129974c"
+dependencies = [
+ "aarch64-cpu",
+ "arm-gic-driver 0.15.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "arm_pl011",
+ "arm_pl031",
+ "axcpu",
+ "axplat",
+ "int_ratio",
+ "kspin",
+ "lazyinit",
+ "log",
+ "page_table_entry",
+ "spin 0.10.0",
+]
+
+[[package]]
 name = "axplat-aarch64-peripherals"
 version = "0.2.0"
 source = "git+https://github.com/Starry-OS/axplat_crates.git?rev=243fdc9#243fdc9265ba472cffffddc1cae9a47371caf8e3"
 dependencies = [
  "aarch64-cpu",
- "arm-gic-driver",
+ "arm-gic-driver 0.15.8 (git+https://github.com/Starry-OS/arm-gic-driver.git?rev=2e33925)",
  "arm_pl011",
  "arm_pl031",
  "axcpu",
@@ -569,7 +652,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "axplat-aarch64-peripherals 0.2.0 (git+https://github.com/Starry-OS/axplat_crates.git?rev=243fdc9)",
  "log",
  "page_table_entry",
 ]
@@ -1114,6 +1197,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dw_apb_uart"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f93d496c8faa9dc676ebfa225432e1e3b57645c9268ead889286546f6d39356d"
+dependencies = [
+ "tock-registers 0.8.1",
+]
+
+[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1543,7 +1635,7 @@ dependencies = [
 [[package]]
 name = "lwext4_rust"
 version = "0.2.0"
-source = "git+https://github.com/Starry-OS/lwext4_rust.git?rev=033fa2c#033fa2cc848c7495651b00af6695dc07de06d596"
+source = "git+https://github.com/starry-mix-rk3588/lwext4_rust.git?rev=be6aaaa#be6aaaac2c43126f5abb9e9469005b9078433ac7"
 dependencies = [
  "bindgen",
  "log",
@@ -1881,6 +1973,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdif-base"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6953f438bbbdf58e55513c31e70fa0f85daba2927e8a59130a04608141bb552"
+dependencies = [
+ "as-any",
+ "async-trait",
+ "rdif-def",
+ "thiserror",
+]
+
+[[package]]
+name = "rdif-def"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c238eb44d86fabc99028adc973f896ce2202aeb6184cc8b89863f2d157d7ca06"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "rdif-intc"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4e7622f78dc9b40958500119553f3c15b9bb9829002d87d0f4b114ebe302a40"
+dependencies = [
+ "cfg-if",
+ "rdif-base",
+ "thiserror",
+]
+
+[[package]]
+name = "realtek-drivers"
+version = "0.1.0"
+source = "git+https://github.com/drivercraft/realtek-drivers.git#9c0f2dd8c2d4364c8bc77bb703e145d11ddb7b05"
+dependencies = [
+ "crate_interface",
+ "log",
+ "memory_addr",
+]
+
+[[package]]
 name = "regex"
 version = "1.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2106,6 +2240,7 @@ dependencies = [
  "axfs-ng",
  "axhal",
  "axlog",
+ "axplat-aarch64-opi5p",
  "axplat-riscv64-visionfive2",
  "axruntime",
  "axsync",
@@ -2232,7 +2367,7 @@ dependencies = [
 [[package]]
 name = "starry-signal"
 version = "0.2.2"
-source = "git+https://github.com/Starry-OS/starry-signal.git?rev=5b23dec#5b23dec9b652fade066df91d9d9c84e9b5f89709"
+source = "git+https://github.com/Starry-OS/starry-signal.git?rev=acdb5e9#acdb5e9a76bc5e2244c04c4d5d842d9f3c0416a5"
 dependencies = [
  "axcpu",
  "bitflags 2.10.0",

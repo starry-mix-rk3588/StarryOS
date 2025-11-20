@@ -7,6 +7,7 @@ exclude = ["arceos"]
 version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
+categories = ["os", "no-std", "hardware-support"]
 
 authors = [
     "Azure-stars <Azure_stars@126.com>",
@@ -79,6 +80,8 @@ starry-vm = "0.2"
 starry-core = { path = "./core" }
 starry-api = { path = "./api" }
 
+axdriver_base = { git = "https://github.com/Starry-OS/axdriver_crates.git", rev = "a263470" }
+
 [package]
 name = "starry"
 version.workspace = true
@@ -90,6 +93,7 @@ repository.workspace = true
 
 [features]
 default = []
+myplat = []
 qemu = [
     "axfeat/driver-virtio-blk",
     "axfeat/driver-virtio-net",
@@ -114,6 +118,8 @@ qemu = [
 ]
 
 vf2 = ["dep:axplat-riscv64-visionfive2", "axfeat/driver-sdmmc-gpt"]
+
+opi5p = ["dep:axplat-aarch64-opi5p", "axfeat/driver-sdmmc-gpt", "axfeat/driver-realtek"]
 
 # Stubs
 pci = ["axfeat/bus-pci"]
@@ -144,6 +150,11 @@ rev = "5056c1d"
 features = ["fp-simd", "irq", "rtc"]
 optional = true
 
+[dependencies.axplat-aarch64-opi5p]
+path = "crates/axplat-opi5p/axplat-aarch64-opi5p"
+features = ["fp-simd", "irq", "rtc"]
+optional = true
+
 [patch.crates-io]
 axcpu = { git = "https://github.com/Starry-OS/axcpu.git", rev = "fdbf401" }
 axerrno = { git = "https://github.com/Starry-OS/axerrno.git", rev = "f1e2bca" }
@@ -163,3 +174,6 @@ starry-vm = { git = "https://github.com/Starry-OS/starry-vm.git", rev = "4c91a6b
 [package.metadata.vendor-filter]
 platforms = ["riscv64gc-unknown-none-elf", "loongarch64-unknown-none-softfloat"]
 all-features = true
+
+
+[patch]

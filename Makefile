@@ -17,6 +17,8 @@ export NO_AXSTD := y
 export AX_LIB := axfeat
 export APP_FEATURES := qemu
 
+TARGET_OBJ := StarryOS-Realtek_aarch64-opi5p
+
 ifeq ($(MEMTRACK), y)
 	APP_FEATURES += starry-api/memtrack
 endif
@@ -47,5 +49,13 @@ la:
 
 vf2:
 	$(MAKE) ARCH=riscv64 APP_FEATURES=vf2 MYPLAT=axplat-riscv64-visionfive2 BUS=dummy build
+
+opi5p:
+	$(MAKE) ARCH=aarch64 APP_FEATURES=opi5p MYPLAT=axplat-aarch64-opi5p BUS=mmio UIMAGE=y build
+	rust-objdump -d --print-imm-hex $(TARGET_OBJ).elf > $(TARGET_OBJ).disasm
+
+tftp:
+	@echo "Copy $(TARGET_OBJ).uimg to /data/docker/tftpboot/data/kernel.uimg"
+	@cp $(TARGET_OBJ).uimg /data/docker/tftpboot/data/kernel.uimg
 
 .PHONY: build run justrun debug disasm clean
