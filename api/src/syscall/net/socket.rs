@@ -3,6 +3,7 @@ use axerrno::{AxError, AxResult, LinuxError};
 use axnet::vsock::{VsockSocket, VsockStreamTransport};
 use axnet::{
     Shutdown, SocketAddrEx, SocketOps,
+    raw::RawSocket,
     tcp::TcpSocket,
     udp::UdpSocket,
     unix::{DgramTransport, StreamTransport, UnixSocket},
@@ -47,8 +48,7 @@ pub fn sys_socket(domain: u32, raw_ty: u32, proto: u32) -> AxResult<isize> {
             axnet::Socket::Vsock(VsockSocket::new(VsockStreamTransport::new()))
         }
         (AF_INET, SOCK_RAW) => {
-            warn!("Raw sockets are not supported");
-            return Err(AxError::Other(LinuxError::EPERM));
+            axnet::Socket::Raw(RawSocket::new())
         }
         (AF_INET, _) | (AF_UNIX, _) | (AF_VSOCK, _) => {
             warn!("Unsupported socket type: domain: {domain}, ty: {ty}");

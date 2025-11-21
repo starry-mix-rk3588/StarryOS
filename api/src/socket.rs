@@ -75,7 +75,9 @@ impl SocketAddrExt for SocketAddr {
 
 impl SocketAddrExt for SocketAddrV4 {
     fn read_from_user(addr: UserConstPtr<sockaddr>, addrlen: socklen_t) -> AxResult<Self> {
-        if addrlen != size_of::<sockaddr_in>() as socklen_t {
+        // 放宽长度检查：只需要至少包含必要的字段（family + port + addr）
+        let min_size = size_of::<__kernel_sa_family_t>() + size_of::<u16>() + size_of::<u32>();
+        if (addrlen as usize) < min_size {
             return Err(AxError::InvalidInput);
         }
         let addr_in = addr.cast::<sockaddr_in>().get_as_ref()?;

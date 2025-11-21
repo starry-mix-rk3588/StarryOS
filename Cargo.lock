@@ -2007,7 +2007,6 @@ dependencies = [
 [[package]]
 name = "realtek-drivers"
 version = "0.1.0"
-source = "git+https://github.com/drivercraft/realtek-drivers.git#9c0f2dd8c2d4364c8bc77bb703e145d11ddb7b05"
 dependencies = [
  "crate_interface",
  "log",

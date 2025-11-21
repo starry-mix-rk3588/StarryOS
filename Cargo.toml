@@ -176,4 +176,5 @@ platforms = ["riscv64gc-unknown-none-elf", "loongarch64-unknown-none-softfloat"]
 all-features = true
 
 
-[patch]
+[patch."https://github.com/drivercraft/realtek-drivers.git".realtek-drivers]
+path = "crates/realtek-drivers"
